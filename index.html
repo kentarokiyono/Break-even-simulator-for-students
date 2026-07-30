@@ -1,0 +1,1676 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>収益分岐点・経費シミュレーター</title>
+<meta name="description" content="いくら売れば赤字にならないかがすぐわかる計算ツール">
+<meta name="theme-color" content="#1e8a63">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="分岐点">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='38' fill='%231e8a63'/%3E%3Ctext x='90' y='122' font-size='104' text-anchor='middle' fill='white' font-family='sans-serif'%3E%C2%A5%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DotGothic16&family=Zen+Maru+Gothic:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#233248; --navy-deep:#1a2740; --ink:#233248; --ink2:#6b6f7a;
+  --paper:#f4f5ec; --surface:#f4f5ec; --card:#fffdf6;
+  --line:#d8d4c0; --line-soft:#e7e3d2;
+  --profit:#1e8a63; --loss:#d84a2f; --gray:#6b6f7a; --amber:#c8861d;
+  --shadow:5px 5px 0 rgba(35,50,72,.07);
+  --ease:cubic-bezier(.2,.7,.2,1);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--surface);color:var(--ink);
+  font-family:"Zen Maru Gothic","Hiragino Maru Gothic ProN",system-ui,sans-serif;
+  font-size:14px;line-height:1.6;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
+button{touch-action:manipulation}
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:
+    linear-gradient(rgba(35,50,72,.045) 1px,transparent 1px) 0 0/24px 24px,
+    linear-gradient(90deg,rgba(35,50,72,.045) 1px,transparent 1px) 0 0/24px 24px,
+    linear-gradient(rgba(35,50,72,.07) 1px,transparent 1px) 0 0/120px 120px,
+    linear-gradient(90deg,rgba(35,50,72,.07) 1px,transparent 1px) 0 0/120px 120px,
+    radial-gradient(1100px 480px at 85% -8%, rgba(253,243,214,.85), transparent),
+    var(--paper);}
+.num{font-family:"DotGothic16",ui-monospace,monospace;font-variant-numeric:tabular-nums;letter-spacing:0}
+.eyebrow{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--gray);font-weight:700}
+
+header{background:var(--card);border-bottom:2px dashed var(--line);padding:20px 22px}
+header .wrap{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+header .wrap::before{content:"¥";flex:none;width:48px;height:48px;background:var(--loss);color:#fff;border-radius:11px;
+  display:grid;place-items:center;font:28px "DotGothic16";transform:rotate(-5deg);box-shadow:3px 3px 0 rgba(35,50,72,.18)}
+header h1{font:24px/1.25 "DotGothic16";margin:0;color:var(--ink);letter-spacing:.02em}
+header .eyebrow{color:var(--profit)}
+header p{margin:2px 0 0;font-size:12.5px;color:var(--ink2);flex-basis:100%}
+
+.layout{max-width:1180px;margin:0 auto;padding:20px 22px 90px;display:grid;grid-template-columns:330px 1fr;gap:22px;align-items:start}
+
+.panel{background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+aside.panel{position:sticky;top:14px;max-height:calc(100vh - 28px);overflow:auto}
+.sec{border-bottom:2px dashed var(--line-soft);padding:15px 16px}
+.sec:last-child{border-bottom:0}
+.sec > .eyebrow{display:flex;align-items:center;gap:8px;margin-bottom:11px;
+  font:13px "DotGothic16";letter-spacing:.03em;text-transform:none;color:var(--ink)}
+.sec > .eyebrow::before{content:"";width:9px;height:9px;border-radius:2px;background:var(--profit);transform:rotate(45deg);flex:none}
+
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.modes button{padding:10px 6px;font:inherit;font-size:11.5px;background:var(--card);color:var(--ink);
+  border:1.5px solid var(--line);border-radius:11px;cursor:pointer;line-height:1.4;transition:all .18s var(--ease)}
+.modes button::before{content:"";display:inline-block;width:8px;height:8px;border-radius:2px;background:var(--profit);
+  transform:rotate(45deg);margin-right:6px;vertical-align:middle;opacity:.45}
+.modes button:hover{border-color:var(--ink);transform:translateY(-2px);box-shadow:3px 3px 0 rgba(35,50,72,.1)}
+.modes button[aria-pressed="true"]{background:var(--profit);border-color:var(--profit);color:#fff;font-weight:700;box-shadow:3px 3px 0 rgba(30,138,99,.3)}
+.modes button[aria-pressed="true"]::before{background:#fff;opacity:.9}
+
+.f{display:grid;grid-template-columns:1fr 108px;gap:6px 8px;align-items:center;margin-bottom:10px}
+.f label{font-size:12.5px;font-weight:700;color:#3a4a63}
+.f .inputwrap{display:flex;align-items:center;border:1.5px solid var(--line);border-radius:9px;background:#fff;transition:border-color .2s,box-shadow .2s}
+.f .inputwrap:focus-within{border-color:var(--ink);box-shadow:0 0 0 3px rgba(35,50,72,.08)}
+.f input,.f select{width:100%;min-width:0;border:0;padding:6px 7px;font:inherit;font-weight:700;text-align:right;background:transparent}
+.f input:focus,.f select:focus{outline:none}
+.f .unit{font-size:10.5px;color:var(--gray);padding:0 7px 0 2px;white-space:nowrap}
+.f .sub{grid-column:1/-1;font-size:11px;color:var(--gray);margin:-4px 0 2px}
+.f.wide{grid-template-columns:1fr}
+.f.wide input,.f.wide select{text-align:left;border:1.5px solid var(--line);border-radius:9px;background:#fff}
+.rangewrap{grid-column:1/-1;margin:-2px 0 2px}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:18px;background:transparent;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:6px;background:#e6e2d0;border:1px solid var(--line);border-radius:6px}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;margin-top:-7px;border-radius:50%;background:var(--profit);border:3px solid #fff;box-shadow:1px 2px 4px rgba(0,0,0,.25);transition:transform .12s var(--ease)}
+input[type=range]:active::-webkit-slider-thumb{transform:scale(1.2)}
+input[type=range]::-moz-range-track{height:6px;background:#e6e2d0;border:1px solid var(--line);border-radius:6px}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--profit);border:3px solid #fff}
+.total-row{display:flex;justify-content:space-between;border-top:2px dashed var(--line);margin-top:9px;padding-top:9px;font-size:12.5px;font-weight:700}
+.total-row strong{font:700 18px "DotGothic16"}
+
+.kpigrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;background:transparent;padding:14px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);
+  padding:12px 13px;transition:transform .2s var(--ease),background .2s var(--ease);animation:pop .38s var(--ease) both}
+.kpi:hover{background:#fffef9;transform:translateY(-2px)}
+@keyframes pop{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.kpi .k{font-size:10.5px;letter-spacing:.04em;color:var(--gray);font-weight:700;display:block;min-height:28px}
+.kpi .v{font:700 23px/1.25 "DotGothic16";display:block;transition:color .3s}
+.kpi .s{font-size:11px;color:var(--gray);display:block}
+.kpi.hero{background:var(--profit);border-color:var(--profit);color:#fff;box-shadow:5px 5px 0 rgba(30,138,99,.25)}
+.kpi.hero:hover{background:#1b7d59}
+.kpi.hero .k,.kpi.hero .s{color:#d3efe4}
+.kpi.flash{animation:flash .6s var(--ease)}
+@keyframes flash{0%{background:#e7f4ee}100%{background:var(--card)}}
+.kpi.hero.flash{animation:flashh .6s var(--ease)}
+@keyframes flashh{0%{background:#2fa37a}100%{background:var(--profit)}}
+.pos{color:var(--profit)}.neg{color:var(--loss)}.warn{color:var(--amber)}
+
+h2.sh{font:14px "DotGothic16";margin:0;padding:12px 16px;border-bottom:2px dashed var(--line-soft);
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+h2.sh::before{content:"";width:10px;height:10px;border-radius:3px;background:var(--amber);transform:rotate(45deg);flex:none}
+h2.sh b{font:14px "DotGothic16"}
+h2.sh span{font-weight:400;color:var(--gray);font-size:11.5px;font-family:"Zen Maru Gothic",sans-serif}
+.mt{margin-top:18px}
+.panel.enter{animation:slidein .34s var(--ease) both}
+@keyframes slidein{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+svg{display:block;width:100%;height:auto;touch-action:none}
+.chartwrap{position:relative;padding:6px 8px 0}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:#5a6372;padding:6px 16px 14px}
+.legend i{display:inline-block;width:14px;height:0;border-top-width:3px;border-top-style:solid;vertical-align:middle;margin-right:5px;border-radius:2px}
+
+table{width:100%;border-collapse:collapse;font-size:12.5px}
+th,td{padding:7px 8px;border-bottom:1px dashed var(--line-soft);text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+thead th{font-size:10.5px;letter-spacing:.06em;color:var(--gray);border-bottom:2px solid var(--line);position:sticky;top:0;background:var(--card);z-index:1}
+tbody tr{transition:background .15s}
+tbody tr:hover{background:#f6f4e8}
+tbody tr.base{background:#f3f0e2;font-weight:700}
+tbody tr.best td{color:var(--profit);font-weight:700}
+tbody tr.settled td{color:#a7ad9c}
+tbody tr[data-click]{cursor:pointer}
+.scroll{overflow:auto;-webkit-overflow-scrolling:touch}
+tr.shortfall td{color:var(--loss)}
+td.txt,th.txt{text-align:left;white-space:normal;min-width:110px}
+.rowbtn{font:inherit;font-size:11px;padding:3px 8px;border:1.5px solid var(--line);background:var(--card);border-radius:8px;cursor:pointer;color:var(--ink);font-weight:700;transition:all .15s}
+.rowbtn:hover{border-color:var(--ink);background:var(--ink);color:#fff}
+.rowbtn.del{color:var(--loss)}
+.rowbtn.del:hover{background:var(--loss);border-color:var(--loss);color:#fff}
+
+.alert{margin:0 14px 10px;padding:10px 14px;font-size:12.5px;border-left:4px solid var(--loss);background:#fdeeea;color:#8f2b1c;border-radius:10px;animation:slidein .3s var(--ease) both}
+.alert:first-child{margin-top:14px}
+.alert.ok{border-color:var(--profit);background:#e7f4ee;color:#1f5a4a}
+.alert.warn{border-color:var(--amber);background:#fbf3e2;color:#7a5310}
+.note{font-size:12px;color:var(--gray);padding:12px 16px 0}
+.note ul{margin:4px 0 0;padding-left:18px}
+.bar{display:flex;gap:8px;padding:14px 16px;flex-wrap:wrap;align-items:center}
+.bar button{font:inherit;font-size:12px;font-weight:700;padding:7px 13px;background:var(--card);border:1.5px solid var(--ink);color:var(--ink);border-radius:9px;cursor:pointer;box-shadow:3px 3px 0 rgba(35,50,72,.12);transition:all .16s var(--ease)}
+.bar button:hover{background:var(--ink);color:#fff;transform:translate(-1px,-1px);box-shadow:4px 4px 0 rgba(35,50,72,.16)}
+.bar button:active{transform:translate(1px,1px);box-shadow:1px 1px 0 rgba(35,50,72,.12)}
+.bar button.primary{background:var(--profit);border-color:var(--profit);color:#fff}
+.bar button.primary:hover{background:#176b4d}
+.seg{display:inline-flex;border:1.5px solid var(--ink);border-radius:999px;overflow:hidden;background:var(--card)}
+.seg button{border:0;border-left:1px solid var(--line);border-radius:0;padding:6px 14px;background:transparent;cursor:pointer;font-weight:700}
+.seg button:first-child{border-left:0}
+.seg button:hover{transform:none;background:#f3f0e2}
+.seg button[aria-pressed="true"]{background:var(--profit);color:#fff}
+
+.entryform{display:grid;grid-template-columns:repeat(12,1fr);gap:9px;padding:14px 16px}
+.entryform .fld{display:flex;flex-direction:column;gap:4px}
+.entryform label{font-size:10.5px;letter-spacing:.05em;color:var(--gray);font-weight:700}
+.entryform input,.entryform select{font:inherit;font-size:13px;font-weight:700;padding:7px 8px;border:1.5px solid var(--line);border-radius:9px;background:#fff;min-width:0;width:100%;transition:border-color .18s,box-shadow .18s}
+.entryform input:focus,.entryform select:focus{outline:none;border-color:var(--ink);box-shadow:0 0 0 3px rgba(30,138,99,.14)}
+.entryform .c2{grid-column:span 2}.entryform .c3{grid-column:span 3}.entryform .c4{grid-column:span 4}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;border:1px solid var(--line);border-radius:999px;padding:3px 9px;background:#eef0e4;animation:pop .25s var(--ease) both}
+.chip button{border:0;background:var(--ink);color:#fff;cursor:pointer;font-size:11px;line-height:1;padding:0;width:16px;height:16px;border-radius:50%}
+.inline{display:flex;gap:6px}
+.inline input{flex:1;padding:6px 8px;border:1.5px solid var(--line);border-radius:9px;font:inherit;font-weight:700;background:#fff}
+.inline input:focus{outline:none;border-color:var(--ink)}
+.inline button{font:inherit;font-size:12px;font-weight:700;padding:6px 12px;border:1.5px solid var(--ink);background:var(--card);color:var(--ink);border-radius:9px;cursor:pointer}
+.inline button:hover{background:var(--ink);color:#fff}
+.hint{font-size:11px;color:var(--gray);padding:0 16px 12px}
+
+#calcFab{position:fixed;right:18px;bottom:18px;z-index:40;width:56px;height:56px;border-radius:50%;border:0;background:var(--profit);color:#fff;font:22px "DotGothic16";cursor:pointer;box-shadow:4px 4px 0 rgba(35,50,72,.2);transition:transform .2s var(--ease),box-shadow .2s}
+#calcFab:hover{transform:scale(1.1) rotate(-8deg);box-shadow:6px 6px 0 rgba(35,50,72,.25)}
+#calcPanel{position:fixed;right:18px;bottom:84px;z-index:41;width:276px;background:var(--card);border:1.5px solid var(--ink);border-radius:14px;box-shadow:6px 6px 0 rgba(35,50,72,.18);overflow:hidden;animation:calcin .22s var(--ease) both;transform-origin:bottom right}
+@keyframes calcin{from{opacity:0;transform:scale(.9) translateY(10px)}to{opacity:1;transform:none}}
+#calcPanel[hidden]{display:none}
+.calchead{background:var(--profit);color:#fff;padding:8px 12px;font:13px "DotGothic16";display:flex;justify-content:space-between;align-items:center}
+.calchead button{border:0;background:transparent;color:#fff;font-size:16px;cursor:pointer}
+.calcexp{padding:7px 12px 0;font-size:12px;color:var(--gray);min-height:20px;text-align:right;word-break:break-all}
+.calcout{padding:0 12px 9px;font:700 27px "DotGothic16";text-align:right;transition:color .2s}
+.keys{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line-soft)}
+.keys button{border:0;background:#fff;padding:12px 0;font:inherit;font-size:16px;cursor:pointer;transition:background .12s}
+.keys button:hover{background:#f6f4e8}
+.keys button:active{background:#ece7d4;transform:scale(.96)}
+.keys button.op{color:var(--profit);font-weight:700}
+.keys button.fn{font-size:12px;color:var(--gray)}
+.keys button.eq{background:var(--profit);color:#fff;font-weight:700}
+.calcuse{display:flex;gap:6px;padding:9px 12px;border-top:1px solid var(--line-soft)}
+.calcuse button{flex:1;font:inherit;font-size:11.5px;font-weight:700;padding:6px 4px;border:1.5px solid var(--ink);color:var(--ink);background:var(--card);border-radius:8px;cursor:pointer}
+.calcuse button:hover{background:var(--ink);color:#fff}
+.calchist{max-height:96px;overflow:auto;border-top:1px solid var(--line-soft);font-size:11.5px}
+.calchist div{padding:5px 12px;border-bottom:1px solid var(--line-soft);text-align:right;cursor:pointer;color:var(--gray)}
+.calchist div:hover{background:#f6f4e8;color:var(--ink)}
+
+/* ===== モバイルアプリUI（既定は非表示） ===== */
+.tabbar,.settings-fab,.backdrop,.drawer-close{display:none}
+
+@media(max-width:900px){
+  .layout{grid-template-columns:1fr;gap:14px;padding:12px 12px calc(88px + env(safe-area-inset-bottom))}
+  aside.panel{position:fixed;top:0;left:0;bottom:0;width:min(88vw,380px);max-height:none;z-index:60;
+    transform:translateX(-105%);transition:transform .3s var(--ease);border-radius:0 18px 18px 0;
+    border:1px solid var(--line);border-left:0;overflow:auto;-webkit-overflow-scrolling:touch}
+  body.drawer-open aside.panel{transform:none;box-shadow:8px 0 30px rgba(35,50,72,.25)}
+  .drawer-close{display:flex;position:sticky;top:0;z-index:2;justify-content:flex-end;align-items:center;gap:6px;
+    width:100%;border:0;background:var(--card);padding:13px 16px;font:700 13px "Zen Maru Gothic";color:var(--ink);
+    cursor:pointer;border-bottom:2px dashed var(--line-soft)}
+  .backdrop{display:block;position:fixed;inset:0;background:rgba(26,39,64,.45);z-index:55;opacity:0;pointer-events:none;transition:opacity .3s}
+  body.drawer-open .backdrop{opacity:1;pointer-events:auto}
+  .tabbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:50;background:var(--card);
+    border-top:1.5px solid var(--line);padding:6px 8px calc(6px + env(safe-area-inset-bottom));box-shadow:0 -4px 16px rgba(35,50,72,.08)}
+  .tabbar button{flex:1;border:0;background:transparent;padding:6px 2px 5px;font:inherit;font-size:10px;font-weight:700;
+    color:var(--gray);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;border-radius:10px;transition:all .15s}
+  .tabbar button .ic{font-size:20px;line-height:1;filter:grayscale(.4) opacity(.7);transition:all .15s}
+  .tabbar button[aria-pressed="true"]{color:var(--profit);background:#e7f4ee}
+  .tabbar button[aria-pressed="true"] .ic{filter:none;transform:translateY(-1px) scale(1.08)}
+  .settings-fab{display:flex;position:fixed;left:14px;bottom:calc(80px + env(safe-area-inset-bottom));z-index:45;
+    align-items:center;gap:6px;border:0;background:var(--ink);color:#fff;font:700 13px "Zen Maru Gothic";
+    padding:12px 17px;border-radius:999px;cursor:pointer;box-shadow:4px 4px 0 rgba(35,50,72,.2)}
+  .settings-fab:active{transform:scale(.95)}
+  #calcFab{right:14px;bottom:calc(80px + env(safe-area-inset-bottom));width:50px;height:50px;font-size:19px}
+  #calcPanel{right:12px;left:12px;width:auto;bottom:calc(140px + env(safe-area-inset-bottom))}
+  header{padding:14px 14px}
+  header .wrap{gap:12px}
+  header .wrap::before{width:40px;height:40px;font-size:23px}
+  header h1{font-size:18px}
+  header p{font-size:11.5px}
+  .kpigrid{grid-template-columns:1fr 1fr;gap:10px;padding:10px}
+  .kpi.hero{grid-column:1/-1}
+  .kpi .v{font-size:19px}
+  h2.sh{font-size:13px;padding:11px 13px}
+  .bar{padding:12px 13px}
+  .bar button{flex:1 1 auto;min-height:44px}
+  .entryform{padding:12px 13px;grid-template-columns:repeat(6,1fr)}
+  .entryform .c2,.entryform .c3,.entryform .c4{grid-column:span 3}
+  .f label{font-size:13px}
+  .f input,.f select{padding:10px 8px;font-size:16px}
+  .entryform input,.entryform select{font-size:16px;padding:10px 8px}
+  .inline input{font-size:16px;padding:10px 8px}
+  input[type=range]::-webkit-slider-thumb{width:24px;height:24px;margin-top:-10px}
+  .legend{font-size:11px;gap:10px;padding:6px 13px 14px}
+  th,td{padding:9px 7px;font-size:12px}
+  .modes button{min-height:48px}
+}
+@media(max-width:760px){.kpigrid{grid-template-columns:1fr 1fr}}
+@media (prefers-reduced-motion: reduce){*{animation:none !important;transition:none !important}}
+@media print{aside.panel,#calcFab,#calcPanel,.tabbar,.settings-fab,.backdrop{display:none}.layout{grid-template-columns:1fr}.bar{display:none}body{background:#fff}body::before{display:none}.panel{box-shadow:none}}
+
+/* ===== 横はみ出し防止（追記のみ・上の既存ルールは未変更） ===== */
+html,body{max-width:100%;overflow-x:hidden}
+.layout{min-width:0}
+.layout > main{min-width:0}
+.panel,.chartwrap,.legend,.note,.bar,.sec{min-width:0}
+.scroll{max-width:100%}
+.kpigrid{grid-template-columns:repeat(4,minmax(0,1fr))}
+.kpi{min-width:0;overflow-wrap:anywhere}
+.entryform{grid-template-columns:repeat(12,minmax(0,1fr))}
+@media(max-width:900px){
+  .layout{grid-template-columns:minmax(0,1fr)}
+  .kpigrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .entryform{grid-template-columns:repeat(6,minmax(0,1fr))}
+}
+@media(max-width:760px){.kpigrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <span class="eyebrow">分岐点・お金・帳簿</span>
+    <h1>収益分岐点・経費シミュレーター</h1>
+    <p>つまみやグラフを動かすだけで、「いくら売れば赤字にならないか」がすぐわかります。毎月の収支や、立て替えたお金の精算も自動で計算します。</p>
+  </div>
+</header>
+
+<div class="layout">
+<aside class="panel" id="settingsPanel">
+  <button class="drawer-close" id="drawerClose" type="button">✕ とじる</button>
+  <div class="sec">
+    <span class="eyebrow">何に使う？</span>
+    <div class="modes" id="modes">
+      <button type="button" data-mode="unit" aria-pressed="true">ふつうの販売<br>（1個ずつ）</button>
+      <button type="button" data-mode="sub" aria-pressed="false">月額サービス<br>（サブスク）</button>
+      <button type="button" data-mode="fest" aria-pressed="false">学園祭・模擬店<br>（イベント）</button>
+      <button type="button" data-mode="book" aria-pressed="false">かんたん帳簿<br>（立替の精算）</button>
+    </div>
+  </div>
+
+  <div class="sec" data-for="unit">
+    <span class="eyebrow">売れ方の設定</span>
+    <div class="f"><label for="u_price">1個の値段</label><div class="inputwrap"><input class="num" id="u_price" type="number" min="0" step="10" value="3000" data-range="0,20000,100"><span class="unit">円</span></div></div>
+    <div class="f"><label for="u_var">1個売れるたびにかかるお金</label><div class="inputwrap"><input class="num" id="u_var" type="number" min="0" step="10" value="1100" data-range="0,10000,50"><span class="unit">円</span></div>
+      <span class="sub">材料・送料・手数料など。売れた分だけ増えます。</span></div>
+    <div class="f"><label for="u_qty">1か月に売れそうな数</label><div class="inputwrap"><input class="num" id="u_qty" type="number" min="0" step="1" value="120" data-range="0,600,1"><span class="unit">個/月</span></div></div>
+    <div class="f"><label for="u_growth">毎月の伸び</label><div class="inputwrap"><input class="num" id="u_growth" type="number" step="0.5" value="8" data-range="-20,40,0.5"><span class="unit">%</span></div>
+      <span class="sub">毎月どれくらい売上が伸びるか。0で横ばい。</span></div>
+    <div class="f"><label for="u_days">1か月の営業日数</label><div class="inputwrap"><input class="num" id="u_days" type="number" min="1" step="1" value="20" data-range="1,31,1"><span class="unit">日</span></div></div>
+  </div>
+
+  <div class="sec" data-for="sub" hidden>
+    <span class="eyebrow">売れ方の設定</span>
+    <div class="f"><label for="s_price">1人あたりの月額</label><div class="inputwrap"><input class="num" id="s_price" type="number" min="0" step="100" value="1500" data-range="0,20000,100"><span class="unit">円/月</span></div></div>
+    <div class="f"><label for="s_var">1人あたり毎月かかるお金</label><div class="inputwrap"><input class="num" id="s_var" type="number" min="0" step="10" value="300" data-range="0,5000,10"><span class="unit">円/月</span></div>
+      <span class="sub">サーバー代など、会員1人ごとにかかるお金。</span></div>
+    <div class="f"><label for="s_cust0">いまの会員数</label><div class="inputwrap"><input class="num" id="s_cust0" type="number" min="0" step="1" value="30" data-range="0,1000,1"><span class="unit">人</span></div></div>
+    <div class="f"><label for="s_new">毎月ふえる会員数</label><div class="inputwrap"><input class="num" id="s_new" type="number" min="0" step="1" value="25" data-range="0,300,1"><span class="unit">人/月</span></div></div>
+    <div class="f"><label for="s_churn">毎月の解約率（やめる割合）</label><div class="inputwrap"><input class="num" id="s_churn" type="number" min="0.1" max="100" step="0.5" value="5" data-range="0.5,40,0.5"><span class="unit">%</span></div></div>
+  </div>
+
+  <div class="sec" data-for="fest" hidden>
+    <span class="eyebrow">商品と値段</span>
+    <div class="f"><label for="x_price">1個の値段</label><div class="inputwrap"><input class="num" id="x_price" type="number" min="0" step="50" value="400" data-range="0,2000,50"><span class="unit">円</span></div></div>
+    <div class="f"><label for="x_mat">材料費（1個）</label><div class="inputwrap"><input class="num" id="x_mat" type="number" min="0" step="10" value="120" data-range="0,1000,10"><span class="unit">円</span></div>
+      <span class="sub">先にまとめて買います。売れ残ると損になります。</span></div>
+    <div class="f"><label for="x_pack">容器・包装（1個）</label><div class="inputwrap"><input class="num" id="x_pack" type="number" min="0" step="5" value="30" data-range="0,300,5"><span class="unit">円</span></div></div>
+    <div class="f"><label for="x_purchase">仕入れる数</label><div class="inputwrap"><input class="num" id="x_purchase" type="number" min="0" step="10" value="500" data-range="0,2000,10"><span class="unit">個</span></div>
+      <span class="sub">右のグラフをクリックしても決められます。</span></div>
+  </div>
+  <div class="sec" data-for="fest" hidden>
+    <span class="eyebrow">お客さんと作れる数</span>
+    <div class="f"><label for="x_days">開催日数</label><div class="inputwrap"><input class="num" id="x_days" type="number" min="1" step="1" value="2" data-range="1,7,1"><span class="unit">日</span></div></div>
+    <div class="f"><label for="x_hours">1日の営業時間</label><div class="inputwrap"><input class="num" id="x_hours" type="number" min="1" step="0.5" value="7" data-range="1,12,0.5"><span class="unit">時間</span></div></div>
+    <div class="f"><label for="x_visitors">1日の来場者数</label><div class="inputwrap"><input class="num" id="x_visitors" type="number" min="0" step="100" value="4000" data-range="0,20000,100"><span class="unit">人/日</span></div></div>
+    <div class="f"><label for="x_catch">買う人の割合（立寄率）</label><div class="inputwrap"><input class="num" id="x_catch" type="number" min="0" max="100" step="0.5" value="4" data-range="0.5,20,0.5"><span class="unit">%</span></div>
+      <span class="sub">100人のうち何人が買うか。3〜7%が目安。</span></div>
+    <div class="f"><label for="x_perhead">1人あたり購入数</label><div class="inputwrap"><input class="num" id="x_perhead" type="number" min="0.1" step="0.1" value="1.2" data-range="1,3,0.1"><span class="unit">個</span></div></div>
+    <div class="f"><label for="x_cap">1時間に作れる数</label><div class="inputwrap"><input class="num" id="x_cap" type="number" min="1" step="5" value="45" data-range="5,300,5"><span class="unit">個/時</span></div>
+      <span class="sub">ここが儲けの上限になります。</span></div>
+    <div class="f"><label for="x_staff">同時に働く人数</label><div class="inputwrap"><input class="num" id="x_staff" type="number" min="1" step="1" value="4" data-range="1,20,1"><span class="unit">人</span></div></div>
+  </div>
+
+  <div class="sec" data-for="unit sub">
+    <span class="eyebrow">毎月出ていくお金（固定費）</span>
+    <div class="f"><label for="f_rent">家賃・光熱費</label><div class="inputwrap"><input class="num" id="f_rent" type="number" min="0" step="1000" value="0"><span class="unit">円</span></div></div>
+    <div class="f"><label for="f_labor">人件費（自分の給料も）</label><div class="inputwrap"><input class="num" id="f_labor" type="number" min="0" step="1000" value="60000"><span class="unit">円</span></div></div>
+    <div class="f"><label for="f_ad">広告宣伝費</label><div class="inputwrap"><input class="num" id="f_ad" type="number" min="0" step="1000" value="40000" data-range="0,300000,1000"><span class="unit">円</span></div></div>
+    <div class="f"><label for="f_sys">システム・通信費</label><div class="inputwrap"><input class="num" id="f_sys" type="number" min="0" step="500" value="8000"><span class="unit">円</span></div></div>
+    <div class="f"><label for="f_other">その他（毎月）</label><div class="inputwrap"><input class="num" id="f_other" type="number" min="0" step="1000" value="5000"><span class="unit">円</span></div></div>
+    <div class="total-row"><span>毎月の固定費 合計</span><strong class="num" id="fixedTotal">—</strong></div>
+  </div>
+
+  <div class="sec" data-for="fest" hidden>
+    <span class="eyebrow">イベントでかかるお金（固定費）</span>
+    <div class="f"><label for="z_stall">出店料・保健所申請</label><div class="inputwrap"><input class="num" id="z_stall" type="number" min="0" step="500" value="5000"><span class="unit">円</span></div></div>
+    <div class="f"><label for="z_rent">機材・テントレンタル</label><div class="inputwrap"><input class="num" id="z_rent" type="number" min="0" step="500" value="12000"><span class="unit">円</span></div></div>
+    <div class="f"><label for="z_promo">看板・装飾・広報</label><div class="inputwrap"><input class="num" id="z_promo" type="number" min="0" step="500" value="6000"><span class="unit">円</span></div></div>
+    <div class="f"><label for="z_supply">消耗品・氷・燃料</label><div class="inputwrap"><input class="num" id="z_supply" type="number" min="0" step="500" value="4000"><span class="unit">円</span></div></div>
+    <div class="f"><label for="z_other">その他（交通費など）</label><div class="inputwrap"><input class="num" id="z_other" type="number" min="0" step="500" value="3000"><span class="unit">円</span></div></div>
+    <div class="total-row"><span>イベントの固定費 合計</span><strong class="num" id="festFixedTotal">—</strong></div>
+  </div>
+
+  <div class="sec" data-for="unit sub">
+    <span class="eyebrow">手元のお金と目標</span>
+    <div class="f"><label for="init">最初にまとめてかかるお金</label><div class="inputwrap"><input class="num" id="init" type="number" min="0" step="10000" value="400000" data-range="0,3000000,10000"><span class="unit">円</span></div></div>
+    <div class="f"><label for="equity">いま手元にあるお金</label><div class="inputwrap"><input class="num" id="equity" type="number" min="0" step="10000" value="300000"><span class="unit">円</span></div></div>
+    <div class="f"><label for="debt">借りたお金・もらった補助金</label><div class="inputwrap"><input class="num" id="debt" type="number" min="0" step="10000" value="200000"><span class="unit">円</span></div></div>
+    <div class="f"><label for="repay">毎月の返済額</label><div class="inputwrap"><input class="num" id="repay" type="number" min="0" step="1000" value="5000"><span class="unit">円/月</span></div></div>
+    <div class="f"><label for="goal">毎月これだけ儲けたい額</label><div class="inputwrap"><input class="num" id="goal" type="number" min="0" step="10000" value="100000" data-range="0,1000000,10000"><span class="unit">円</span></div></div>
+    <div class="f"><label for="tax">税金の目安</label><div class="inputwrap"><input class="num" id="tax" type="number" min="0" max="60" step="1" value="25" data-range="0,50,1"><span class="unit">%</span></div></div>
+  </div>
+
+  <div class="sec" data-for="fest" hidden>
+    <span class="eyebrow">目標とメンバー</span>
+    <div class="f"><label for="z_goal">目標の儲け（合計）</label><div class="inputwrap"><input class="num" id="z_goal" type="number" min="0" step="5000" value="60000" data-range="0,500000,5000"><span class="unit">円</span></div></div>
+    <div class="f"><label for="z_members">メンバーの人数</label><div class="inputwrap"><input class="num" id="z_members" type="number" min="1" step="1" value="12" data-range="1,50,1"><span class="unit">人</span></div></div>
+    <div class="f"><label for="z_fund">事前に集めたお金</label><div class="inputwrap"><input class="num" id="z_fund" type="number" min="0" step="1000" value="30000" data-range="0,500000,1000"><span class="unit">円</span></div></div>
+  </div>
+
+  <div class="sec" data-for="book" hidden>
+    <span class="eyebrow">プロジェクトの設定</span>
+    <div class="f wide"><label for="b_project">プロジェクト名</label><input id="b_project" type="text" value="模擬店プロジェクト"></div>
+    <div class="f"><label for="b_opening">はじめからあるお金（繰越・部費）</label><div class="inputwrap"><input class="num" id="b_opening" type="number" step="1000" value="30000"><span class="unit">円</span></div></div>
+    <div class="f wide"><label for="b_split">精算のしかた</label>
+      <select id="b_split">
+        <option value="equal">みんなで割り勘（均等割）</option>
+        <option value="refund">プロジェクトのお金から全額返す</option>
+      </select>
+    </div>
+    <div class="f wide"><label for="b_month">注目する月（グラフをクリックでも選べます）</label><input id="b_month" type="month"></div>
+  </div>
+  <div class="sec" data-for="book" hidden>
+    <span class="eyebrow">メンバー</span>
+    <div class="inline"><input id="memberInput" type="text" placeholder="名前を入れて追加"><button type="button" id="memberAdd">追加</button></div>
+    <div class="chips" id="memberChips"></div>
+  </div>
+  <div class="sec" data-for="book" hidden>
+    <span class="eyebrow">データの保存・復元</span>
+    <div class="bar" style="padding:0">
+      <button type="button" id="btnJson">JSONでコピー</button>
+      <button type="button" id="btnImport">貼りつけて戻す</button>
+      <button type="button" id="btnSample">サンプルを入れる</button>
+      <button type="button" id="btnClear">ぜんぶ消す</button>
+    </div>
+    <p class="hint" style="padding:8px 0 0">入力した内容はURLに自動で保存されます。「JSONでコピー」すると別の端末でも使えます。</p>
+  </div>
+</aside>
+
+<main>
+  <div class="panel">
+    <div class="kpigrid" id="kpis"></div>
+    <div id="alerts"></div>
+  </div>
+
+  <div class="panel mt" data-for="book" hidden>
+    <h2 class="sh"><b>お金の動きを記録</b><span id="editHint"></span></h2>
+    <div class="entryform">
+      <div class="fld c2"><label for="e_date">日付</label><input id="e_date" type="date"></div>
+      <div class="fld c2"><label for="e_type">区分</label><select id="e_type"><option value="out">支出</option><option value="in">収入</option></select></div>
+      <div class="fld c2"><label for="e_cat">勘定科目</label><select id="e_cat"></select></div>
+      <div class="fld c3"><label for="e_memo">内容（何に使った？）</label><input id="e_memo" type="text" placeholder="例）鉄板レンタル代"></div>
+      <div class="fld c3"><label for="e_amount">金額（税込・計算式もOK）</label><input id="e_amount" type="text" inputmode="decimal" placeholder="1200+300*2"></div>
+      <div class="fld c2"><label for="e_tax">税区分</label><select id="e_tax"><option value="10">課税10%</option><option value="8">軽減8%</option><option value="0">非課税・対象外</option></select></div>
+      <div class="fld c3"><label for="e_payer">払った人・受け取った人</label><select id="e_payer"></select></div>
+      <div class="fld c3"><label for="e_method">払い方</label>
+        <select id="e_method"><option value="advance">個人立替（自分の財布）</option><option value="cash">プロジェクト現金</option><option value="bank">口座振込</option><option value="card">カード</option></select></div>
+      <div class="fld c4"><label>&nbsp;</label>
+        <div class="bar" style="padding:0;gap:6px"><button type="button" class="primary" id="e_add">記録する</button><button type="button" id="e_cancel" hidden>編集をやめる</button></div></div>
+    </div>
+    <p class="hint">金額には「1200+300*2」のような計算式も書けます。「個人立替」にすると、精算の表に自動で入ります。</p>
+  </div>
+
+  <div class="panel mt" data-for="book" hidden>
+    <h2 class="sh"><b>月ごとのお金</b><span id="bookHint"></span></h2>
+    <div class="chartwrap" id="monthChart" data-chart="month"></div>
+    <div class="legend">
+      <span><i style="border-color:var(--profit)"></i>収入</span>
+      <span><i style="border-color:var(--loss)"></i>支出</span>
+      <span><i style="border-color:var(--navy)"></i>残高（たまっていくお金）</span>
+      <span style="color:var(--gray)">棒にカーソルを乗せると内訳が出ます。クリックで注目する月を選べます。</span>
+    </div>
+    <div class="scroll"><table id="monthTable"></table></div>
+  </div>
+
+  <div class="panel mt" data-for="book" hidden>
+    <h2 class="sh"><b>何にいくら使った？</b><span>バーの長さ＝全体のうちの割合</span></h2>
+    <div class="scroll"><table id="catTable"></table></div>
+  </div>
+
+  <div class="panel mt" data-for="book" hidden>
+    <h2 class="sh"><b>立て替えと精算</b><span id="splitHint"></span></h2>
+    <div class="scroll"><table id="memberTable"></table></div>
+    <div id="settleList"></div>
+  </div>
+
+  <div class="panel mt" data-for="book" hidden>
+    <h2 class="sh"><b>記録した一覧</b><span id="ledgerCount"></span></h2>
+    <div class="scroll" style="max-height:460px"><table id="ledgerTable"></table></div>
+    <div class="bar"><button type="button" id="btnTsvBook">Excel用にコピー（TSV）</button><button type="button" id="btnPrint2">印刷／PDF保存</button></div>
+  </div>
+
+  <div class="panel mt" data-for="unit sub fest">
+    <h2 class="sh"><b>損益分岐点のグラフ</b><span>グラフをドラッグ、または←→キーで数を動かせます</span></h2>
+    <div class="chartwrap" id="bepChart" data-chart="bep"></div>
+    <div class="legend">
+      <span><i style="border-color:var(--navy)"></i>売上</span>
+      <span><i style="border-color:var(--loss)"></i>かかったお金（合計）</span>
+      <span><i style="border-color:var(--gray);border-top-style:dashed"></i>固定費</span>
+      <span><i style="border-color:var(--profit)"></i>儲け</span>
+    </div>
+  </div>
+
+  <div class="panel mt" data-for="unit sub">
+    <h2 class="sh"><b>手元のお金の推移</b><span id="cfHint"></span></h2>
+    <div class="bar" style="padding-bottom:0">
+      <span class="seg" id="months">
+        <button type="button" data-m="12" aria-pressed="true">12か月</button>
+        <button type="button" data-m="24" aria-pressed="false">24か月</button>
+        <button type="button" data-m="36" aria-pressed="false">36か月</button>
+      </span>
+      <span class="hint" style="padding:0">棒にカーソルを乗せるとその月の内訳</span>
+    </div>
+    <div class="chartwrap" id="cfChart" data-chart="cf"></div>
+    <div class="legend">
+      <span><i style="border-color:var(--profit)"></i>その月の儲け（黒字）</span>
+      <span><i style="border-color:var(--loss)"></i>その月の儲け（赤字）</span>
+      <span><i style="border-color:var(--navy)"></i>手元のお金（たまり）</span>
+    </div>
+    <div class="scroll" style="max-height:320px"><table id="cfTable"></table></div>
+  </div>
+
+  <div class="panel mt" data-for="fest" hidden>
+    <h2 class="sh"><b>仕入れる量と儲け</b><span>クリックすると、その仕入量になります</span></h2>
+    <div class="chartwrap" id="purChart" data-chart="pur"></div>
+    <div class="legend">
+      <span><i style="border-color:var(--navy)"></i>儲け</span>
+      <span><i style="border-color:var(--profit)"></i>いちばん儲かる量</span>
+      <span><i style="border-color:var(--ink);border-top-style:dotted"></i>いまの仕入量</span>
+    </div>
+    <div class="scroll"><table id="purTable"></table></div>
+  </div>
+
+  <div class="panel mt" data-for="fest" hidden>
+    <h2 class="sh"><b>当日のペース（どれくらいの速さで売る？）</b></h2>
+    <div class="scroll"><table id="paceTable"></table></div>
+  </div>
+
+  <div class="panel mt" data-for="fest" hidden>
+    <h2 class="sh"><b>お客さんの数を変えたら？</b><span>行をクリックすると、その来場者数になります</span></h2>
+    <div class="scroll"><table id="scenTable"></table></div>
+  </div>
+
+  <div class="panel mt" data-for="unit sub">
+    <h2 class="sh"><b>数字を変えたらどうなる？</b><span>値段や固定費を少し変えたときの分岐点</span></h2>
+    <div class="scroll"><table id="sensTable"></table></div>
+  </div>
+
+  <div class="panel mt">
+    <h2 class="sh"><b>計算のしくみ（かんたん解説）</b></h2>
+    <div class="note" id="formulas"></div>
+    <div class="bar">
+      <button type="button" id="btnPrint">印刷／PDF保存</button>
+      <button type="button" id="btnCopy">数字をコピー（TSV）</button>
+      <button type="button" id="btnLink">この条件のURLをコピー</button>
+      <button type="button" id="btnReset">はじめの数字に戻す</button>
+    </div>
+  </div>
+</main>
+</div>
+
+<!-- モバイル用UI -->
+<nav class="tabbar" id="tabbar" aria-label="モード切替">
+  <button type="button" data-mode="unit" aria-pressed="true"><span class="ic">🛒</span>販売</button>
+  <button type="button" data-mode="sub" aria-pressed="false"><span class="ic">🔁</span>月額</button>
+  <button type="button" data-mode="fest" aria-pressed="false"><span class="ic">🎪</span>模擬店</button>
+  <button type="button" data-mode="book" aria-pressed="false"><span class="ic">📒</span>帳簿</button>
+</nav>
+<button class="settings-fab" id="settingsFab" type="button">⚙ 設定</button>
+<div class="backdrop" id="backdrop"></div>
+
+<button id="calcFab" type="button" aria-label="電卓を開く">計</button>
+<div id="calcPanel" hidden role="dialog" aria-label="電卓">
+  <div class="calchead"><span>電卓</span><button type="button" id="calcClose" aria-label="閉じる">×</button></div>
+  <div class="calcexp num" id="calcExp"></div>
+  <div class="calcout num" id="calcOut">0</div>
+  <div class="keys" id="calcKeys">
+    <button type="button" class="fn" data-k="C">C</button>
+    <button type="button" class="fn" data-k="back">⌫</button>
+    <button type="button" class="fn" data-k="tax-in">税込 ×1.1</button>
+    <button type="button" class="fn" data-k="tax-out">税抜 ÷1.1</button>
+    <button type="button" data-k="7">7</button><button type="button" data-k="8">8</button><button type="button" data-k="9">9</button>
+    <button type="button" class="op" data-k="/">÷</button>
+    <button type="button" data-k="4">4</button><button type="button" data-k="5">5</button><button type="button" data-k="6">6</button>
+    <button type="button" class="op" data-k="*">×</button>
+    <button type="button" data-k="1">1</button><button type="button" data-k="2">2</button><button type="button" data-k="3">3</button>
+    <button type="button" class="op" data-k="-">−</button>
+    <button type="button" data-k="0">0</button><button type="button" data-k=".">.</button>
+    <button type="button" class="eq" data-k="=">=</button>
+    <button type="button" class="op" data-k="+">+</button>
+  </div>
+  <div class="calcuse">
+    <button type="button" id="calcToAmount">金額欄へ入力</button>
+    <button type="button" id="calcCopy">結果をコピー</button>
+  </div>
+  <div class="calchist" id="calcHist"></div>
+</div>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const IDS = ["u_price","u_var","u_qty","u_growth","u_days","s_price","s_var","s_cust0","s_new","s_churn",
+  "x_price","x_mat","x_pack","x_purchase","x_days","x_hours","x_visitors","x_catch","x_perhead","x_cap","x_staff",
+  "f_rent","f_labor","f_ad","f_sys","f_other","z_stall","z_rent","z_promo","z_supply","z_other",
+  "init","equity","debt","repay","goal","tax","z_goal","z_members","z_fund",
+  "b_project","b_opening","b_split","b_month"];
+const DEFAULTS = {};
+IDS.forEach(id => DEFAULTS[id] = $(id).value);
+const REDUCED = window.matchMedia ? matchMedia("(prefers-reduced-motion: reduce)").matches : false;
+
+let mode = "unit", months = 12, markerX = null;
+let members = ["自分"], entries = [], editId = null, seq = 1;
+const hover = {cf: null, pur: null, month: null};
+
+const CATS = {
+  out: ["材料費","仕入","消耗品費","会場・出店料","機材レンタル","印刷・広報費","交通費","通信費","飲食費","備品","雑費","その他支出"],
+  in: ["売上","協賛金","補助金・助成金","部費・会費","貸付","その他収入"]
+};
+const METHODS = {advance:"個人立替", cash:"プロジェクト現金", bank:"口座振込", card:"カード"};
+
+const num = id => { const v = parseFloat($(id).value); return isFinite(v) ? v : 0; };
+const yen = n => (n < 0 ? "-" : "") + "¥" + Math.round(Math.abs(n)).toLocaleString("ja-JP");
+const yen0 = n => Math.round(n).toLocaleString("ja-JP");
+const pct = (n, d) => (isFinite(n) ? (n * 100).toFixed(d === undefined ? 1 : d) + "%" : "—");
+const cls = n => n >= 0 ? "pos" : "neg";
+const isFest = () => mode === "fest";
+const isBook = () => mode === "book";
+const esc = s => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+function evalExpr(src){
+  const s = String(src).replace(/[×✕]/g, "*").replace(/[÷]/g, "/").replace(/[，,\s¥円]/g, "")
+                       .replace(/[（]/g, "(").replace(/[）]/g, ")").replace(/[ー－−]/g, "-").replace(/[＋]/g, "+");
+  if (!s) return null;
+  let i = 0;
+  const peek = () => s[i];
+  const expr = () => { let v = term(); while (peek() === "+" || peek() === "-"){ const op = s[i++]; const r = term(); v = op === "+" ? v + r : v - r; } return v; };
+  const term = () => {
+    let v = unary();
+    while (peek() === "*" || peek() === "/" || peek() === "%"){
+      const op = s[i++];
+      if (op === "%"){ v = v / 100; continue; }
+      const r = unary();
+      v = op === "*" ? v * r : (r === 0 ? NaN : v / r);
+    }
+    return v;
+  };
+  const unary = () => { if (peek() === "-"){ i++; return -unary(); } if (peek() === "+"){ i++; return unary(); } return atom(); };
+  const atom = () => {
+    if (peek() === "("){ i++; const v = expr(); if (peek() === ")") i++; return v; }
+    const start = i;
+    while (i < s.length && /[0-9.]/.test(s[i])) i++;
+    if (start === i){ i++; return NaN; }
+    const v = parseFloat(s.slice(start, i));
+    if (peek() === "%"){ i++; return v / 100; }
+    return v;
+  };
+  const out = expr();
+  return isFinite(out) ? out : null;
+}
+
+const charts = {};
+let rafId = null;
+const easeOut = t => 1 - Math.pow(1 - t, 3);
+function lerpVal(a, b, t){
+  if (typeof b === "number") return typeof a === "number" && isFinite(a) ? a + (b - a) * t : b;
+  if (Array.isArray(b)){
+    if (!Array.isArray(a) || a.length !== b.length) return b;
+    return b.map((v, i) => lerpVal(a[i], v, t));
+  }
+  if (b && typeof b === "object"){
+    if (!a || typeof a !== "object") return b;
+    const o = {};
+    Object.keys(b).forEach(k => o[k] = lerpVal(a[k], b[k], t));
+    return o;
+  }
+  return b;
+}
+function tick(now){
+  rafId = null;
+  let active = false;
+  Object.keys(charts).forEach(k => {
+    const c = charts[k];
+    if (!c.t0) return;
+    const t = Math.min(1, (now - c.t0) / c.dur);
+    c.cur = t >= 1 ? c.target : lerpVal(c.from, c.target, easeOut(t));
+    c.draw(c.cur);
+    if (t >= 1) c.t0 = 0; else active = true;
+  });
+  if (active) rafId = requestAnimationFrame(tick);
+}
+function animateChart(id, target, draw, dur){
+  const c = charts[id] || (charts[id] = {});
+  c.draw = draw; c.target = target;
+  if (!c.cur || REDUCED || dur === 0){ c.cur = target; c.t0 = 0; draw(target); return; }
+  c.from = c.cur; c.t0 = performance.now(); c.dur = dur || 430;
+  if (!rafId) rafId = requestAnimationFrame(tick);
+}
+function repaint(id){ const c = charts[id]; if (c && c.cur) c.draw(c.cur); }
+const geom = {};
+
+let calcExp = "", calcHist = [];
+function calcRender(){
+  const v = evalExpr(calcExp);
+  $("calcExp").textContent = calcExp.replace(/\*/g, "×").replace(/\//g, "÷") || " ";
+  $("calcOut").textContent = calcExp === "" ? "0" : (v === null ? "—" : (Math.round(v * 1e6) / 1e6).toLocaleString("ja-JP"));
+  $("calcHist").innerHTML = calcHist.slice(0, 12).map((h, i) =>
+    '<div data-h="' + i + '">' + esc(h.e.replace(/\*/g, "×").replace(/\//g, "÷")) + ' = <strong>' + yen0(h.v) + '</strong></div>').join("");
+}
+function calcKey(k){
+  if (k === "C") calcExp = "";
+  else if (k === "back") calcExp = calcExp.slice(0, -1);
+  else if (k === "="){ const v = evalExpr(calcExp); if (v !== null){ calcHist.unshift({e: calcExp, v}); calcExp = String(Math.round(v * 1e6) / 1e6); } }
+  else if (k === "tax-in"){ const v = evalExpr(calcExp); if (v !== null) calcExp = String(Math.round(v * 1.1)); }
+  else if (k === "tax-out"){ const v = evalExpr(calcExp); if (v !== null) calcExp = String(Math.round(v / 1.1)); }
+  else calcExp += k;
+  calcRender();
+}
+$("calcKeys").addEventListener("click", e => { const b = e.target.closest("button"); if (b) calcKey(b.dataset.k); });
+$("calcHist").addEventListener("click", e => { const d = e.target.closest("div[data-h]"); if (d){ calcExp = String(calcHist[+d.dataset.h].v); calcRender(); } });
+$("calcFab").addEventListener("click", () => { const p = $("calcPanel"); p.hidden = !p.hidden; if (!p.hidden) calcRender(); });
+$("calcClose").addEventListener("click", () => $("calcPanel").hidden = true);
+$("calcToAmount").addEventListener("click", () => {
+  const v = evalExpr(calcExp); if (v === null) return;
+  if (!isBook()){ mode = "book"; syncToggles(); render(); }
+  $("e_amount").value = Math.round(v);
+  $("e_amount").focus();
+});
+$("calcCopy").addEventListener("click", async e => {
+  const v = evalExpr(calcExp); if (v === null) return;
+  try { await navigator.clipboard.writeText(String(Math.round(v))); e.target.textContent = "コピーしました"; }
+  catch(err){ e.target.textContent = "コピー不可"; }
+  setTimeout(() => e.target.textContent = "結果をコピー", 1500);
+});
+document.addEventListener("keydown", e => {
+  if ($("calcPanel").hidden) return;
+  const t = e.target.tagName;
+  if (t === "INPUT" || t === "SELECT" || t === "TEXTAREA") return;
+  if (/^[0-9.]$/.test(e.key) || "+-*/".indexOf(e.key) >= 0) calcKey(e.key);
+  else if (e.key === "Enter") calcKey("=");
+  else if (e.key === "Backspace") calcKey("back");
+  else if (e.key === "Escape") $("calcPanel").hidden = true;
+  else return;
+  e.preventDefault();
+});
+
+function model(over){
+  over = over || {};
+  const g = k => over[k] !== undefined ? over[k] : null;
+  let fixed, price, vc, qty;
+  if (isFest()){
+    fixed = g("fixed") !== null ? g("fixed") : num("z_stall") + num("z_rent") + num("z_promo") + num("z_supply") + num("z_other");
+    price = g("price") !== null ? g("price") : num("x_price");
+    vc    = g("vc")    !== null ? g("vc")    : num("x_mat") + num("x_pack");
+    qty   = fest().sold;
+  } else {
+    fixed = g("fixed") !== null ? g("fixed") : num("f_rent") + num("f_labor") + num("f_ad") + num("f_sys") + num("f_other");
+    price = g("price") !== null ? g("price") : (mode === "sub" ? num("s_price") : num("u_price"));
+    vc    = g("vc")    !== null ? g("vc")    : (mode === "sub" ? num("s_var") : num("u_var"));
+    qty   = mode === "sub" ? num("s_cust0") : num("u_qty");
+  }
+  const cm = price - vc, cmr = price > 0 ? cm / price : 0;
+  const bepQty = cm > 0 ? fixed / cm : Infinity;
+  return {fixed, price, vc, cm, cmr, bepQty, bepRev: cm > 0 ? bepQty * price : Infinity,
+          qty, rev: qty * price, profit: cm * qty - fixed, churn: Math.max(num("s_churn"), 0.1) / 100};
+}
+function festProfit(purchase, demand, capacity, o){
+  const sold = Math.max(0, Math.min(demand, purchase, capacity));
+  const matCost = purchase * o.mat, packCost = sold * o.pack;
+  return {purchase, sold, revenue: sold * o.price, matCost, packCost, cost: o.fixed + matCost + packCost,
+          profit: sold * o.price - (o.fixed + matCost + packCost),
+          waste: Math.max(0, purchase - sold), wasteLoss: Math.max(0, purchase - sold) * o.mat};
+}
+function fest(over){
+  over = over || {};
+  const o = {
+    price: over.price !== undefined ? over.price : num("x_price"),
+    mat: over.mat !== undefined ? over.mat : num("x_mat"),
+    pack: over.pack !== undefined ? over.pack : num("x_pack"),
+    fixed: over.fixed !== undefined ? over.fixed : num("z_stall") + num("z_rent") + num("z_promo") + num("z_supply") + num("z_other")
+  };
+  const days = Math.max(1, num("x_days")), hpd = Math.max(0.5, num("x_hours")), hours = days * hpd;
+  const visitors = (over.visitors !== undefined ? over.visitors : num("x_visitors")) * days;
+  const demand = visitors * (num("x_catch") / 100) * num("x_perhead");
+  const capacity = num("x_cap") * hours;
+  const purchase = over.purchase !== undefined ? over.purchase : num("x_purchase");
+  const r = festProfit(purchase, demand, capacity, o);
+  const optPurchase = Math.min(demand, capacity);
+  const best = festProfit(optPurchase, demand, capacity, o);
+  const cmSold = o.price - o.pack, upfront = o.fixed + r.matCost;
+  const bepSold = cmSold > 0 ? upfront / cmSold : Infinity;
+  const bepIdeal = (o.price - o.mat - o.pack) > 0 ? o.fixed / (o.price - o.mat - o.pack) : Infinity;
+  const goalSold = cmSold > 0 ? (upfront + num("z_goal")) / cmSold : Infinity;
+  const binding = r.sold >= demand - 1e-9 ? "需要" : (r.sold >= capacity - 1e-9 ? "提供能力" : "仕入量");
+  return Object.assign({o, days, hpd, hours, visitors, demand, capacity, optPurchase, best, cmSold, upfront,
+    bepSold, bepIdeal, goalSold, binding, needCatch: visitors > 0 ? bepSold / (num("x_perhead") * visitors) : Infinity}, r);
+}
+function project(n){
+  const m = model();
+  const taxRate = num("tax") / 100, repay = num("repay"), growth = num("u_growth") / 100, newC = num("s_new");
+  let cash = num("equity") + num("debt") - num("init");
+  const start = cash;
+  let carry = 0, cumProfit = 0, cust = num("s_cust0"), q = num("u_qty");
+  const rows = [];
+  for (let i = 1; i <= n; i++){
+    if (mode === "sub"){ if (i > 1) cust = cust * (1 - m.churn) + newC; }
+    else { if (i > 1) q = q * (1 + growth); }
+    const vol = mode === "sub" ? cust : q;
+    const revenue = vol * m.price, variable = vol * m.vc, pbt = revenue - variable - m.fixed;
+    let tax = 0;
+    if (pbt > 0){ const taxable = Math.max(0, pbt - carry); carry = Math.max(0, carry - pbt); tax = taxable * taxRate; }
+    else carry += -pbt;
+    const net = pbt - tax;
+    cumProfit += net; cash += net - repay;
+    rows.push({i, vol, revenue, variable, fixed: m.fixed, pbt, tax, net, cash, cumProfit});
+  }
+  return {rows, start, firstProfit: rows.find(r => r.net > 0), payback: rows.find(r => r.cumProfit >= num("init")),
+          shortfall: rows.find(r => r.cash < 0), m};
+}
+function book(){
+  const opening = num("b_opening");
+  const sorted = entries.slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id));
+  let totalIn = 0, totalOut = 0, taxIn = 0, taxOut = 0, account = opening;
+  const byMonth = {}, byCat = {}, adv = {}, held = {};
+  members.forEach(m => { adv[m] = 0; held[m] = 0; });
+  sorted.forEach(e => {
+    const amt = e.amount, mk = (e.date || "").slice(0, 7) || "未設定";
+    const taxAmt = e.tax > 0 ? amt - amt / (1 + e.tax / 100) : 0;
+    if (!byMonth[mk]) byMonth[mk] = {in: 0, out: 0};
+    if (!byCat[e.cat]) byCat[e.cat] = {type: e.type, amount: 0, tax: 0, count: 0};
+    byCat[e.cat].amount += amt; byCat[e.cat].tax += taxAmt; byCat[e.cat].count++;
+    if (e.type === "in"){ totalIn += amt; taxIn += taxAmt; byMonth[mk].in += amt; if (e.method !== "advance") account += amt; }
+    else { totalOut += amt; taxOut += taxAmt; byMonth[mk].out += amt; if (e.method !== "advance") account -= amt; }
+    if (e.method === "advance" && !e.settled && e.payer){
+      if (adv[e.payer] === undefined){ adv[e.payer] = 0; held[e.payer] = 0; }
+      if (e.type === "out") adv[e.payer] += amt; else held[e.payer] += amt;
+    }
+  });
+  const monthKeys = Object.keys(byMonth).sort();
+  let run = opening;
+  const monthRows = monthKeys.map(k => {
+    const r = byMonth[k];
+    run += r.in - r.out;
+    return {key: k, in: r.in, out: r.out, net: r.in - r.out, balance: run};
+  });
+  const names = Array.from(new Set(members.concat(Object.keys(adv)))).filter(n => n && n !== "プロジェクト");
+  const netAdvance = {};
+  names.forEach(n => netAdvance[n] = (adv[n] || 0) - (held[n] || 0));
+  const totalAdvance = names.reduce((s, n) => s + Math.max(0, netAdvance[n]), 0);
+  const split = $("b_split").value;
+  const share = names.length > 0 ? (totalOut - totalIn) / names.length : 0;
+  const positions = names.map(n => ({
+    name: n, advance: adv[n] || 0, held: held[n] || 0, net: netAdvance[n],
+    share: split === "equal" ? share : 0,
+    balance: split === "equal" ? netAdvance[n] - share : netAdvance[n]
+  }));
+  const cred = positions.filter(p => p.balance > 0.5).map(p => ({name: p.name, v: p.balance})).sort((a, b) => b.v - a.v);
+  const debt = split === "equal"
+    ? positions.filter(p => p.balance < -0.5).map(p => ({name: p.name, v: -p.balance})).sort((a, b) => b.v - a.v)
+    : [{name: "プロジェクト資金", v: cred.reduce((s, c) => s + c.v, 0)}];
+  if (split === "equal"){
+    const cT = cred.reduce((s, c) => s + c.v, 0), dT = debt.reduce((s, c) => s + c.v, 0);
+    if (cT - dT > 0.5) debt.push({name: "プロジェクト資金", v: cT - dT});
+    else if (dT - cT > 0.5) cred.push({name: "プロジェクト資金（口座へ）", v: dT - cT});
+  }
+  const transfers = [];
+  let ci = 0, di = 0;
+  const C = cred.map(x => Object.assign({}, x)), D = debt.map(x => Object.assign({}, x));
+  while (ci < C.length && di < D.length){
+    const v = Math.min(C[ci].v, D[di].v);
+    if (v > 0.5) transfers.push({from: D[di].name, to: C[ci].name, v});
+    C[ci].v -= v; D[di].v -= v;
+    if (C[ci].v <= 0.5) ci++;
+    if (D[di].v <= 0.5) di++;
+  }
+  const balance = opening + totalIn - totalOut;
+  const focus = $("b_month").value;
+  const projectPay = transfers.filter(t => t.from.indexOf("プロジェクト") === 0).reduce((s, t) => s + t.v, 0);
+  const topCat = Object.keys(byCat).filter(c => byCat[c].type === "out").sort((a, b) => byCat[b].amount - byCat[a].amount)[0];
+  return {opening, sorted, totalIn, totalOut, taxIn, taxOut, balance, monthRows, byCat, positions, transfers,
+          totalAdvance, names, split, share, focus, fm: focus ? (byMonth[focus] || {in: 0, out: 0}) : null,
+          topCat, projectPay, account, minBalance: monthRows.reduce((m, r) => Math.min(m, r.balance), balance)};
+}
+
+const kpiState = {};
+function splitNum(str){
+  const m = String(str).match(/-?[\d,]*\.?\d+/);
+  if (!m) return null;
+  const dec = (m[0].split(".")[1] || "").length;
+  return {pre: str.slice(0, m.index), post: str.slice(m.index + m[0].length), v: parseFloat(m[0].replace(/,/g, "")), dec};
+}
+function countTo(el, from, to, pre, post, decimals){
+  if (REDUCED || !isFinite(from)){ el.textContent = pre + fmtN(to, decimals) + post; return; }
+  const t0 = performance.now(), dur = 420;
+  const step = now => {
+    const t = Math.min(1, (now - t0) / dur), v = from + (to - from) * easeOut(t);
+    el.textContent = pre + fmtN(t >= 1 ? to : v, decimals) + post;
+    if (t < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+function fmtN(v, d){
+  return d > 0 ? v.toFixed(d) : Math.round(v).toLocaleString("ja-JP");
+}
+function paintKPIs(cards){
+  const grid = $("kpis");
+  const keys = cards.map(c => c.k).join("|");
+  if (grid.dataset.keys !== keys){
+    grid.dataset.keys = keys;
+    grid.innerHTML = cards.map((c, i) =>
+      '<div class="kpi' + (c.hero ? " hero" : "") + '" data-k="' + i + '" style="animation-delay:' + Math.min(i * 22, 260) + 'ms">' +
+      '<span class="k">' + esc(c.k) + '</span><span class="v num ' + (c.hero ? "" : (c.c || "")) + '"></span>' +
+      '<span class="s">' + esc(c.s || "") + '</span></div>').join("");
+    Object.keys(kpiState).forEach(k => delete kpiState[k]);
+  }
+  cards.forEach((c, i) => {
+    const box = grid.querySelector('[data-k="' + i + '"]');
+    const vEl = box.querySelector(".v"), sEl = box.querySelector(".s");
+    vEl.className = "v num " + (c.hero ? "" : (c.c || ""));
+    if (sEl.textContent !== (c.s || "")) sEl.textContent = c.s || "";
+    const parsed = splitNum(c.v), prev = kpiState[i];
+    if (parsed && prev && prev.pre === parsed.pre && prev.post === parsed.post && prev.v !== parsed.v){
+      countTo(vEl, prev.v, parsed.v, parsed.pre, parsed.post, Math.min(parsed.dec, 2));
+      box.classList.remove("flash"); void box.offsetWidth; box.classList.add("flash");
+    } else if (vEl.textContent !== c.v){
+      vEl.textContent = c.v;
+    }
+    kpiState[i] = parsed || {pre: c.v, post: "", v: NaN};
+  });
+}
+
+function renderKPIs(){
+  const cards = [], alerts = [];
+  if (isBook()){
+    const b = book();
+    cards.push({hero:1, k:"いまの残高", v: yen(b.balance), s:"はじめ " + yen(b.opening) + " ＋ 収支 " + yen(b.totalIn - b.totalOut)});
+    cards.push({k:"収入の合計", v: yen(b.totalIn), c:"pos", s:"うち消費税ぶん " + yen(b.taxIn)});
+    cards.push({k:"支出の合計", v: yen(b.totalOut), c:"neg", s:"うち消費税ぶん " + yen(b.taxOut)});
+    cards.push({k:"収支", v: yen(b.totalIn - b.totalOut), c: cls(b.totalIn - b.totalOut), s:"記録 " + entries.length + "件"});
+    cards.push({k:"まだ精算していない立替", v: yen(b.totalAdvance), c: b.totalAdvance > 0 ? "warn" : "pos",
+      s: b.totalAdvance > 0 ? "立て替えた人 " + b.positions.filter(p => p.net > 0).length + "人" : "精算済み"});
+    cards.push({k: b.split === "equal" ? "1人あたりの負担（割り勘）" : "返すお金の合計",
+      v: b.split === "equal" ? yen(b.share) : yen(b.totalAdvance),
+      s: b.split === "equal" ? b.names.length + "人で割り勘" : "プロジェクトのお金から払う"});
+    cards.push({k:"みんなのお財布の残高", v: yen(b.account), c: cls(b.account), s:"個人が持っている現金は含みません"});
+    cards.push({k:"精算でプロジェクトが払う額", v: yen(b.projectPay), c: b.projectPay > b.account ? "neg" : "pos",
+      s: b.projectPay > b.account ? "お財布が " + yen(b.projectPay - b.account) + " 足りません" : "お財布から払えます"});
+    cards.push({k:"いちばん大きい支出", v: b.topCat ? b.topCat : "—",
+      s: b.topCat ? yen(b.byCat[b.topCat].amount) + "（" + pct(b.byCat[b.topCat].amount / (b.totalOut || 1)) + "）" : ""});
+    cards.push({k:"残高の最低ライン", v: yen(b.minBalance), c: cls(b.minBalance), s:"月末時点"});
+    if (b.focus && b.fm){
+      cards.push({k: b.focus + " の収入", v: yen(b.fm.in), c:"pos", s:"注目している月"});
+      cards.push({k: b.focus + " の支出", v: yen(b.fm.out), c:"neg", s:"注目している月"});
+      cards.push({k: b.focus + " の収支", v: yen(b.fm.in - b.fm.out), c: cls(b.fm.in - b.fm.out), s:"注目している月"});
+    }
+    if (b.balance < 0) alerts.push(["", "残高がマイナスです（" + yen(b.balance) + "）。お金が足りていません。"]);
+    if (b.minBalance < 0 && b.balance >= 0) alerts.push(["warn", "途中の月で残高がマイナスになります（最低 " + yen(b.minBalance) + "）。お金をもらう時期を早める必要があります。"]);
+    if (b.transfers.length) alerts.push(["warn", "まだ精算していない立替があります。下のリストの通りに送金すると、みんなの負担が揃います。"]);
+    if (b.projectPay > b.account + 0.5) alerts.push(["", "精算に " + yen(b.projectPay) + " 必要ですが、お財布には " + yen(b.account) +
+      " しかありません（" + yen(b.projectPay - b.account) + " 不足）。個人が預かっている売上を先に入れてください。"]);
+    if (!entries.length) alerts.push(["ok", "お金の動きを記録すると、月ごとの収支・内訳・立替の精算が自動で出ます。「サンプルを入れる」で試せます。"]);
+  } else if (isFest()){
+    const f = fest();
+    const perMember = num("z_members") > 0 ? f.profit / num("z_members") : 0;
+    const perHourNeed = f.hours > 0 ? f.bepSold / f.hours : Infinity;
+    const dailyCust = f.sold / f.days / Math.max(0.1, num("x_perhead"));
+    const change = Math.max(10000, Math.ceil(dailyCust * 50 / 1000) * 1000);
+    const rain = fest({visitors: num("x_visitors") * 0.5}).profit;
+    cards.push({hero:1, k:"赤字にならない販売数（今の仕入量）",
+      v: isFinite(f.bepSold) ? Math.ceil(f.bepSold).toLocaleString("ja-JP") + "個" : "達成できません",
+      s: isFinite(perHourNeed) ? "1時間に " + perHourNeed.toFixed(1) + "個 / 1日に " + Math.ceil(f.bepSold / f.days) + "個" : ""});
+    cards.push({k:"必要な購入率", v: isFinite(f.needCatch) ? pct(f.needCatch, 2) : "—",
+      c: f.needCatch <= num("x_catch") / 100 ? "pos" : "neg", s:"設定している購入率は " + pct(num("x_catch") / 100, 1)});
+    cards.push({k:"売れそうな数", v: Math.floor(f.sold).toLocaleString("ja-JP") + "個", s:"上限になっているのは「" + f.binding + "」"});
+    cards.push({k:"見込みの儲け（合計）", v: yen(f.profit), c: cls(f.profit), s:"売上 " + yen(f.revenue) + " − かかったお金 " + yen(f.cost)});
+    cards.push({k:"いちばん儲かる仕入量", v: Math.floor(f.optPurchase).toLocaleString("ja-JP") + "個", c:"pos", s:"そのときの儲け " + yen(f.best.profit)});
+    cards.push({k:"売れ残りの見込み", v: Math.floor(f.waste).toLocaleString("ja-JP") + "個", c: f.waste > 0 ? "neg" : "pos", s:"捨てるときの損 " + yen(f.wasteLoss)});
+    cards.push({k:"ほしい数 / 作れる数", v: Math.floor(f.demand).toLocaleString("ja-JP") + " / " + Math.floor(f.capacity).toLocaleString("ja-JP"),
+      c: f.capacity < f.demand ? "warn" : "pos", s: f.capacity < f.demand ? "作れなくて逃す分 " + Math.floor(f.demand - f.capacity) + "個" : "作れる数に余裕あり"});
+    cards.push({k:"1個売ると残るお金", v: yen(f.cmSold), s:"材料費は先に買うので別計算です"});
+    cards.push({k:"目標の儲けに必要な販売数", v: isFinite(f.goalSold) ? Math.ceil(f.goalSold).toLocaleString("ja-JP") + "個" : "達成できません",
+      c: f.goalSold <= f.sold ? "pos" : "neg", s: isFinite(f.goalSold) ? "目標 " + yen(num("z_goal")) + " ／1時間に " + (f.goalSold / f.hours).toFixed(1) + "個" : ""});
+    cards.push({k:"開店前に必要な現金", v: yen(f.upfront), c: f.upfront <= num("z_fund") ? "pos" : "neg", s:"集めたお金 " + yen(num("z_fund"))});
+    cards.push({k:"1人あたりの儲け", v: yen(perMember), c: cls(perMember), s: num("z_members") + "人で分けた場合"});
+    cards.push({k:"1人あたり作れる数", v: num("x_staff") > 0 ? (num("x_cap") / num("x_staff")).toFixed(1) + "個/時" : "—", s: num("x_staff") + "人で働く場合"});
+    cards.push({k:"お釣りの準備金（目安）", v: yen(change), s:"1日ぶん（1人50円で計算）"});
+    cards.push({k:"黒字になるまでの営業時間", v: isFinite(f.bepSold) && f.sold > 0 ? (f.bepSold / (f.sold / f.hours)).toFixed(1) + "時間" : "—",
+      s:"同じペースで売れた場合。全部で " + f.hours + "時間"});
+    cards.push({k:"雨でお客さん半分のときの儲け", v: yen(rain), c: cls(rain), s:"仕入量はそのまま"});
+    cards.push({k:"ムダなく仕入れた場合の分岐点", v: isFinite(f.bepIdeal) ? Math.ceil(f.bepIdeal).toLocaleString("ja-JP") + "個" : "達成できません", s:"売れ残りゼロの理想"});
+    if (f.cmSold <= 0) alerts.push(["", "値段が容器・包装代より安いです。売ってもお金が減ります。"]);
+    if (f.o.price - f.o.mat - f.o.pack <= 0) alerts.push(["", "値段が材料＋容器以下です。値段を見直してください。"]);
+    if (f.purchase > f.optPurchase * 1.05) alerts.push(["warn", "仕入れが多すぎます。" + Math.ceil(f.optPurchase) + "個まで減らすと儲けが " +
+      yen(f.best.profit - f.profit) + " ふえます（売れ残り " + Math.floor(f.waste) + "個を減らせます）。"]);
+    if (f.capacity < f.demand){
+      const missed = Math.max(0, Math.min(f.demand, f.purchase) - f.capacity);
+      alerts.push(["warn", "作れる数が足りません。1時間 " + Math.ceil(f.demand / f.hours) + "個 作れるようにすれば、あと " +
+        Math.floor(missed) + "個（儲け " + yen(missed * f.cmSold) + "）売れます。"]);
+    }
+    if (f.upfront > num("z_fund")) alerts.push(["", "開店前にお金が " + yen(f.upfront - num("z_fund")) + " 足りません。"]);
+    if (f.profit > 0 && f.purchase <= f.optPurchase * 1.05 && f.upfront <= num("z_fund"))
+      alerts.push(["ok", "この条件なら儲けは " + yen(f.profit) + "。必要な購入率 " + pct(f.needCatch, 2) + " は達成できそうです。"]);
+  } else {
+    const m = model(), p = project(months), u = mode === "sub" ? "人" : "個";
+    const priceDrop = m.qty > 0 && m.price > 0 ? 1 - (m.fixed + m.vc * m.qty) / (m.qty * m.price) : NaN;
+    const safety = m.rev > 0 && isFinite(m.bepRev) ? (m.rev - m.bepRev) / m.rev : NaN;
+    const goalQty = m.cm > 0 ? (m.fixed + num("goal")) / m.cm : Infinity;
+    const perDay = mode === "unit" && num("u_days") > 0 ? m.bepQty / num("u_days") : null;
+    cards.push({hero:1, k:"赤字にならない" + (mode === "sub" ? "人数" : "販売数"),
+      v: isFinite(m.bepQty) ? Math.ceil(m.bepQty).toLocaleString("ja-JP") + u : "達成できません",
+      s: perDay ? "1日あたり " + perDay.toFixed(1) + "個" : "この人数で固定費をペイ"});
+    cards.push({k:"赤字にならない売上高", v: isFinite(m.bepRev) ? yen(m.bepRev) : "—", s:"1か月ぶん"});
+    cards.push({k:"1" + u + "売ると残るお金", v: yen(m.cm), s:"残る割合 " + pct(m.cmr)});
+    cards.push({k:"いまの月の儲け（税引前）", v: yen(m.profit), c: cls(m.profit), s:"売上 " + yen(m.rev) + " / 固定費 " + yen(m.fixed)});
+    cards.push({k:"安全余裕率（どれだけ余裕？）", v: isFinite(safety) ? pct(safety) : "—", c: safety >= 0 ? "pos" : "neg", s:"売上がここまで落ちても黒字です"});
+    cards.push({k:"値下げできる限界", v: isFinite(priceDrop) ? pct(priceDrop) : "—", c: priceDrop >= 0 ? "pos" : "neg", s:"これ以上下げると赤字"});
+    cards.push({k:"目標の儲けに必要な数", v: isFinite(goalQty) ? Math.ceil(goalQty).toLocaleString("ja-JP") + u : "達成できません",
+      s: isFinite(goalQty) ? "目標 " + yen(num("goal")) + " ／売上 " + yen(goalQty * m.price) : ""});
+    cards.push({k:"初期投資の回収", v: p.payback ? p.payback.i + "か月目" : months + "か月以内では回収できず", c: p.payback ? "pos" : "neg",
+      s:"儲けの合計が " + yen(num("init")) + " を超える月"});
+    if (mode === "sub"){
+      const ltv = m.cm / m.churn, cac = num("s_new") > 0 ? num("f_ad") / num("s_new") : Infinity;
+      cards.push({k:"LTV（1人から得られる儲け）", v: yen(ltv), s:"平均 " + (1 / m.churn).toFixed(1) + "か月続く"});
+      cards.push({k:"CAC（1人集めるコスト）", v: isFinite(cac) ? yen(cac) : "—", s:"広告費 ÷ 新規会員数"});
+      cards.push({k:"LTV / CAC", v: isFinite(cac) && cac > 0 ? (ltv / cac).toFixed(2) + "倍" : "—",
+        c: isFinite(cac) && ltv / cac >= 3 ? "pos" : "neg", s:"3倍以上が目安"});
+      cards.push({k:"CACの回収期間", v: isFinite(cac) && m.cm > 0 ? (cac / m.cm).toFixed(1) + "か月" : "—", s:"12か月以内が目安"});
+      cards.push({k:"会員の上限（これ以上は増えない）", v: (num("s_new") / m.churn).toFixed(0) + "人", s:"新規会員数 ÷ 解約率"});
+    }
+    cards.push({k:"手元のお金（スタート）", v: yen(p.start), c: cls(p.start), s:"自分のお金＋借入−初期投資"});
+    cards.push({k:"最後の月の手元のお金", v: yen(p.rows[p.rows.length - 1].cash), c: cls(p.rows[p.rows.length - 1].cash), s: months + "か月後"});
+    cards.push({k:"はじめて黒字の月", v: p.firstProfit ? p.firstProfit.i + "か月目" : "まだ", c: p.firstProfit ? "pos" : "neg", s:"月の儲けがプラスになる月"});
+    if (m.cm <= 0) alerts.push(["", "1個売ると残るお金がマイナスです。売るほど赤字に。値段か変動費を先に見直してください。"]);
+    if (p.shortfall) alerts.push(["", p.shortfall.i + "か月目にお金がマイナス（" + yen(p.shortfall.cash) + "）になります。"]);
+    if (m.cm > 0 && !p.shortfall && p.payback) alerts.push(["ok", "お金は足りています。" + p.payback.i + "か月目に初期投資を回収できる計算です。"]);
+    if (num("init") > num("equity") + num("debt")) alerts.push(["", "初期投資が集めたお金を超えています（" + yen(num("init") - num("equity") - num("debt")) + " 不足）。"]);
+  }
+  paintKPIs(cards);
+  const html = alerts.map(x => '<p class="alert ' + x[0] + '">' + esc(x[1]) + '</p>').join("");
+  if ($("alerts").dataset.h !== html){ $("alerts").dataset.h = html; $("alerts").innerHTML = html; }
+}
+
+function bepTarget(){
+  const m = model();
+  let xMax = Math.max(isFinite(m.bepQty) ? m.bepQty * 1.7 : 0, m.qty * 1.4, 10);
+  xMax = Math.ceil(xMax / 10) * 10;
+  const yMax = Math.max(m.price * xMax, m.fixed + m.vc * xMax, m.fixed * 1.4, 1) * 1.05;
+  const f = isFest() ? fest() : null;
+  return {price: m.price, vc: m.vc, fixed: m.fixed, qty: m.qty, xMax, yMax,
+          bepQty: isFinite(m.bepQty) ? m.bepQty : -1, cap: f ? f.capacity : -1, dem: f ? f.demand : -1};
+}
+function drawBEP(d){
+  const W = 760, H = 380, L = 74, R = 18, T = 18, B = 44, iw = W - L - R, ih = H - T - B;
+  const u = mode === "sub" ? "人" : "個";
+  const X = q => L + (q / d.xMax) * iw, Y = v => T + ih - (v / d.yMax) * ih;
+  geom.bep = {W, L, iw, xMax: d.xMax};
+  const mq = Math.max(0, Math.min(markerX === null ? d.qty : markerX, d.xMax));
+  const mRev = mq * d.price, mCost = d.fixed + mq * d.vc, mProfit = mRev - mCost;
+  let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="損益分岐点のグラフ" tabindex="0" id="bepSvg" style="cursor:ew-resize">';
+  for (let i = 0; i <= 5; i++){
+    const v = d.yMax * i / 5, y = Y(v);
+    s += '<line x1="' + L + '" y1="' + y + '" x2="' + (W - R) + '" y2="' + y + '" stroke="#E6EAF0"/>' +
+         '<text x="' + (L - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-size="10" fill="#637082" font-family="ui-monospace,monospace">' + yen0(v) + '</text>';
+  }
+  for (let i = 0; i <= 5; i++){
+    const q = d.xMax * i / 5;
+    s += '<text x="' + X(q) + '" y="' + (H - 24) + '" text-anchor="middle" font-size="10" fill="#637082" font-family="ui-monospace,monospace">' + yen0(q) + '</text>';
+  }
+  s += '<text x="' + (L + iw / 2) + '" y="' + (H - 8) + '" text-anchor="middle" font-size="10.5" fill="#637082">' +
+       (isFest() ? "売れた数（個・期間の合計）" : mode === "sub" ? "会員数（人）" : "1か月の販売数（個）") + '</text>';
+  if (d.bepQty > 0 && d.bepQty < d.xMax){
+    s += '<polygon points="' + [X(0)+','+Y(0), X(d.bepQty)+','+Y(d.bepQty*d.price), X(0)+','+Y(d.fixed)].join(" ") + '" fill="#B4462F" opacity=".10"/>' +
+         '<polygon points="' + [X(d.bepQty)+','+Y(d.bepQty*d.price), X(d.xMax)+','+Y(d.xMax*d.price), X(d.xMax)+','+Y(d.fixed+d.vc*d.xMax)].join(" ") + '" fill="#2E7D6F" opacity=".13"/>';
+  }
+  s += '<line x1="' + X(0) + '" y1="' + Y(d.fixed) + '" x2="' + X(d.xMax) + '" y2="' + Y(d.fixed) + '" stroke="#637082" stroke-width="1.5" stroke-dasharray="5 4"/>' +
+       '<line x1="' + X(0) + '" y1="' + Y(d.fixed) + '" x2="' + X(d.xMax) + '" y2="' + Y(d.fixed + d.vc * d.xMax) + '" stroke="#B4462F" stroke-width="2.5"/>' +
+       '<line x1="' + X(0) + '" y1="' + Y(0) + '" x2="' + X(d.xMax) + '" y2="' + Y(d.price * d.xMax) + '" stroke="#1B2E4A" stroke-width="2.5"/>' +
+       '<line x1="' + L + '" y1="' + Y(0) + '" x2="' + (W - R) + '" y2="' + Y(0) + '" stroke="#1B2E4A"/>' +
+       '<line x1="' + L + '" y1="' + T + '" x2="' + L + '" y2="' + Y(0) + '" stroke="#1B2E4A"/>';
+  if (d.cap > 0 && d.cap <= d.xMax)
+    s += '<line x1="' + X(d.cap) + '" y1="' + T + '" x2="' + X(d.cap) + '" y2="' + Y(0) + '" stroke="#B07A1E" stroke-width="1.5" stroke-dasharray="2 3"/>' +
+         '<text x="' + (X(d.cap) + 5) + '" y="' + (T + 46) + '" font-size="10" fill="#B07A1E">作れる数の上限</text>';
+  if (d.dem > 0 && d.dem <= d.xMax)
+    s += '<line x1="' + X(d.dem) + '" y1="' + T + '" x2="' + X(d.dem) + '" y2="' + Y(0) + '" stroke="#2E7D6F" stroke-width="1.5" stroke-dasharray="2 3"/>' +
+         '<text x="' + (X(d.dem) + 5) + '" y="' + (T + 62) + '" font-size="10" fill="#2E7D6F">ほしい人の数</text>';
+  if (d.bepQty > 0 && d.bepQty <= d.xMax){
+    const bx = X(d.bepQty), by = Y(d.bepQty * d.price);
+    s += '<line x1="' + bx + '" y1="' + by + '" x2="' + bx + '" y2="' + Y(0) + '" stroke="#1B2E4A" stroke-width="1" stroke-dasharray="3 3"/>' +
+         '<circle cx="' + bx + '" cy="' + by + '" r="5" fill="#fff" stroke="#1B2E4A" stroke-width="2.5"/>' +
+         '<text x="' + (bx + 8) + '" y="' + (by - 9) + '" font-size="11" font-weight="700" fill="#1B2E4A">黒字ライン ' +
+         Math.ceil(d.bepQty).toLocaleString("ja-JP") + u + ' / ' + yen(d.bepQty * d.price) + '</text>';
+  }
+  const mx = X(mq);
+  s += '<line x1="' + mx + '" y1="' + T + '" x2="' + mx + '" y2="' + Y(0) + '" stroke="#12233D" stroke-width="1.5"/>' +
+       '<rect x="' + (mx - 5) + '" y="' + (T - 7) + '" width="10" height="14" rx="2" fill="#12233D"/>' +
+       '<line x1="' + mx + '" y1="' + Y(mRev) + '" x2="' + mx + '" y2="' + Y(mCost) + '" stroke="' + (mProfit >= 0 ? "#2E7D6F" : "#B4462F") + '" stroke-width="4"/>' +
+       '<circle cx="' + mx + '" cy="' + Y(mRev) + '" r="3.5" fill="#1B2E4A"/><circle cx="' + mx + '" cy="' + Y(mCost) + '" r="3.5" fill="#B4462F"/>';
+  const boxW = 178, bxx = Math.min(mx + 10, W - R - boxW), byy = T + 6;
+  s += '<rect x="' + bxx + '" y="' + byy + '" width="' + boxW + '" height="66" fill="#fff" fill-opacity=".95" stroke="#D3DAE3" rx="3"/>' +
+       '<text x="' + (bxx + 9) + '" y="' + (byy + 17) + '" font-size="11" fill="#637082">' + (mode === "sub" ? "会員数 " : "販売数 ") +
+       Math.round(mq).toLocaleString("ja-JP") + u + '</text>' +
+       '<text x="' + (bxx + 9) + '" y="' + (byy + 33) + '" font-size="11" fill="#12233D" font-family="ui-monospace,monospace">売上 ' + yen(mRev) + '</text>' +
+       '<text x="' + (bxx + 9) + '" y="' + (byy + 47) + '" font-size="11" fill="#12233D" font-family="ui-monospace,monospace">かかったお金 ' + yen(mCost) + '</text>' +
+       '<text x="' + (bxx + 9) + '" y="' + (byy + 61) + '" font-size="12" font-weight="700" font-family="ui-monospace,monospace" fill="' +
+       (mProfit >= 0 ? "#2E7D6F" : "#B4462F") + '">儲け ' + yen(mProfit) + '</text>';
+  $("bepChart").innerHTML = s + '</svg>';
+}
+
+function makeBarLine(elId, cfg){
+  return function(d){
+    const W = 760, H = 300, L = 74, R = 60, T = 16, B = 34, iw = W - L - R, ih = H - T - B;
+    const Y = v => T + ih - (v - d.yBot) / Math.max(1e-9, d.yTop - d.yBot) * ih;
+    const n = Math.max(1, cfg.labels.length), bw = iw / n;
+    geom[cfg.key] = {W, L, iw, n};
+    const hv = hover[cfg.key];
+    let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="推移グラフ">';
+    for (let i = 0; i <= 4; i++){
+      const v = d.yBot + (d.yTop - d.yBot) * i / 4, y = Y(v);
+      s += '<line x1="' + L + '" y1="' + y + '" x2="' + (W - R) + '" y2="' + y + '" stroke="#E6EAF0"/>' +
+           '<text x="' + (L - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-size="10" fill="#637082" font-family="ui-monospace,monospace">' + yen0(v) + '</text>';
+    }
+    s += '<line x1="' + L + '" y1="' + Y(0) + '" x2="' + (W - R) + '" y2="' + Y(0) + '" stroke="#1B2E4A" stroke-width="1.2"/>';
+    if (hv !== null && hv >= 0 && hv < n)
+      s += '<rect x="' + (L + hv * bw) + '" y="' + T + '" width="' + bw + '" height="' + ih + '" fill="#1B2E4A" opacity=".06"/>';
+    cfg.labels.forEach((lb, i) => {
+      const x = L + i * bw, w = bw * (cfg.two ? 0.3 : 0.62), op = (hv === null || hv === i) ? .85 : .35;
+      if (cfg.two){
+        s += '<rect x="' + (x + bw * 0.14) + '" y="' + Math.min(Y(0), Y(d.pos[i])) + '" width="' + w + '" height="' + Math.max(1, Math.abs(Y(d.pos[i]) - Y(0))) +
+             '" fill="#2E7D6F" opacity="' + op + '" rx="1"/>' +
+             '<rect x="' + (x + bw * 0.52) + '" y="' + Math.min(Y(0), Y(-d.neg[i])) + '" width="' + w + '" height="' + Math.max(1, Math.abs(Y(-d.neg[i]) - Y(0))) +
+             '" fill="#B4462F" opacity="' + op + '" rx="1"/>';
+      } else {
+        const v = d.pos[i] - d.neg[i];
+        s += '<rect x="' + (x + bw * 0.19) + '" y="' + Math.min(Y(0), Y(v)) + '" width="' + w + '" height="' + Math.max(1, Math.abs(Y(v) - Y(0))) +
+             '" fill="' + (v >= 0 ? "#2E7D6F" : "#B4462F") + '" opacity="' + op + '" rx="1"/>';
+      }
+      if (n <= 14 || i % Math.ceil(n / 12) === 0 || hv === i)
+        s += '<text x="' + (x + bw / 2) + '" y="' + (H - 12) + '" text-anchor="middle" font-size="9.5" fill="' + (hv === i ? "#12233D" : "#637082") + '">' + esc(lb) + '</text>';
+    });
+    const pts = d.line.map((v, i) => (L + i * bw + bw / 2) + "," + Y(v));
+    s += '<polyline points="' + (d.start !== undefined ? (L + "," + Y(d.start) + " ") : "") + pts.join(" ") + '" fill="none" stroke="#1B2E4A" stroke-width="2.5"/>';
+    d.line.forEach((v, i) => { if (v < 0) s += '<circle cx="' + (L + i * bw + bw / 2) + '" cy="' + Y(v) + '" r="4" fill="#B4462F"/>'; });
+    if (d.line.length)
+      s += '<text x="' + (W - R + 6) + '" y="' + (Y(d.line[d.line.length - 1]) + 4) + '" font-size="10.5" font-weight="700" fill="#1B2E4A" font-family="ui-monospace,monospace">' +
+           yen0(d.line[d.line.length - 1]) + '</text>';
+    if (hv !== null && hv >= 0 && hv < n){
+      const rows = cfg.tip(hv);
+      const bwid = 172, bh = 20 + rows.length * 15;
+      const bx = Math.min(Math.max(L, L + hv * bw + bw / 2 - bwid / 2), W - R - bwid), by = T + 4;
+      s += '<circle cx="' + (L + hv * bw + bw / 2) + '" cy="' + Y(d.line[hv]) + '" r="4.5" fill="#fff" stroke="#1B2E4A" stroke-width="2"/>' +
+           '<rect x="' + bx + '" y="' + by + '" width="' + bwid + '" height="' + bh + '" rx="3" fill="#fff" fill-opacity=".97" stroke="#1B2E4A"/>' +
+           '<text x="' + (bx + 9) + '" y="' + (by + 15) + '" font-size="11" font-weight="700" fill="#12233D">' + esc(cfg.labelFull(hv)) + '</text>';
+      rows.forEach((r, i) => {
+        s += '<text x="' + (bx + 9) + '" y="' + (by + 30 + i * 15) + '" font-size="10.5" fill="#637082">' + esc(r[0]) + '</text>' +
+             '<text x="' + (bx + bwid - 9) + '" y="' + (by + 30 + i * 15) + '" text-anchor="end" font-size="10.5" font-family="ui-monospace,monospace" fill="' +
+             (r[2] === "pos" ? "#2E7D6F" : r[2] === "neg" ? "#B4462F" : "#12233D") + '">' + esc(r[1]) + '</text>';
+      });
+    }
+    $(elId).innerHTML = s + '</svg>';
+  };
+}
+function hookHover(elId, key, onClick){
+  const el = $(elId);
+  if (el.dataset.hooked) return;
+  el.dataset.hooked = "1";
+  const idx = clientX => {
+    const g = geom[key]; if (!g) return null;
+    const r = el.getBoundingClientRect();
+    const x = (clientX - r.left) / r.width * g.W;
+    const i = Math.floor((x - g.L) / (g.iw / g.n));
+    return i >= 0 && i < g.n ? i : null;
+  };
+  el.addEventListener("pointermove", e => { const i = idx(e.clientX); if (i !== hover[key]){ hover[key] = i; repaint(key); } });
+  el.addEventListener("pointerleave", () => { if (hover[key] !== null){ hover[key] = null; repaint(key); } });
+  if (onClick) el.addEventListener("click", e => { const i = idx(e.clientX); if (i !== null) onClick(i); });
+}
+
+function renderCF(){
+  const p = project(months), rows = p.rows;
+  const vals = rows.map(r => r.cash).concat(rows.map(r => r.net), [0, p.start]);
+  const hi = Math.max.apply(null, vals), lo = Math.min.apply(null, vals), pad = (hi - lo) * 0.1 || 1;
+  const draw = makeBarLine("cfChart", {
+    key: "cf", labels: rows.map(r => String(r.i)), two: false,
+    labelFull: i => rows[i].i + "か月目",
+    tip: i => [["売上", yen(rows[i].revenue), ""], ["変動費", yen(rows[i].variable), ""], ["固定費", yen(rows[i].fixed), ""],
+               ["税引後の儲け", yen(rows[i].net), cls(rows[i].net)], ["手元のお金", yen(rows[i].cash), cls(rows[i].cash)]]
+  });
+  animateChart("cf", {pos: rows.map(r => Math.max(0, r.net)), neg: rows.map(r => Math.max(0, -r.net)),
+                      line: rows.map(r => r.cash), start: p.start, yTop: hi + pad, yBot: lo - pad}, draw);
+  hookHover("cfChart", "cf");
+  $("cfHint").textContent = p.shortfall ? p.shortfall.i + "か月目にお金が足りなくなります" : "お金は足りています（" + months + "か月）";
+  let t = '<thead><tr><th>月</th><th>' + (mode === "sub" ? "会員数" : "販売数") +
+    '</th><th>売上</th><th>変動費</th><th>固定費</th><th>税引前の儲け</th><th>税金</th><th>税引後の儲け</th><th>儲けの合計</th><th>手元のお金</th></tr></thead><tbody>';
+  rows.forEach(r => {
+    t += '<tr class="' + (r.cash < 0 ? "shortfall" : "") + '"><td>' + r.i + '</td><td class="num">' + Math.round(r.vol).toLocaleString("ja-JP") +
+      '</td><td class="num">' + yen0(r.revenue) + '</td><td class="num">' + yen0(r.variable) + '</td><td class="num">' + yen0(r.fixed) +
+      '</td><td class="num ' + cls(r.pbt) + '">' + yen0(r.pbt) + '</td><td class="num">' + yen0(r.tax) +
+      '</td><td class="num ' + cls(r.net) + '">' + yen0(r.net) + '</td><td class="num ' + cls(r.cumProfit) + '">' + yen0(r.cumProfit) +
+      '</td><td class="num ' + cls(r.cash) + '">' + yen0(r.cash) + '</td></tr>';
+  });
+  $("cfTable").innerHTML = t + '</tbody>';
+}
+
+function drawPur(d){
+  const W = 760, H = 300, L = 74, R = 24, T = 18, B = 42, iw = W - L - R, ih = H - T - B;
+  const X = q => L + q / d.xMax * iw, Y = v => T + ih - (v - d.yBot) / Math.max(1e-9, d.yTop - d.yBot) * ih;
+  geom.pur = {W, L, iw, xMax: d.xMax};
+  const N = d.profits.length - 1;
+  let s = '<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="仕入量と儲けのグラフ" style="cursor:crosshair">';
+  for (let i = 0; i <= 4; i++){
+    const v = d.yBot + (d.yTop - d.yBot) * i / 4, y = Y(v);
+    s += '<line x1="' + L + '" y1="' + y + '" x2="' + (W - R) + '" y2="' + y + '" stroke="#E6EAF0"/>' +
+         '<text x="' + (L - 8) + '" y="' + (y + 4) + '" text-anchor="end" font-size="10" fill="#637082" font-family="ui-monospace,monospace">' + yen0(v) + '</text>';
+  }
+  s += '<line x1="' + L + '" y1="' + Y(0) + '" x2="' + (W - R) + '" y2="' + Y(0) + '" stroke="#1B2E4A" stroke-width="1.2"/>';
+  for (let i = 0; i <= 5; i++){
+    const q = d.xMax * i / 5;
+    s += '<text x="' + X(q) + '" y="' + (H - 22) + '" text-anchor="middle" font-size="10" fill="#637082" font-family="ui-monospace,monospace">' + yen0(q) + '</text>';
+  }
+  s += '<text x="' + (L + iw / 2) + '" y="' + (H - 6) + '" text-anchor="middle" font-size="10.5" fill="#637082">仕入れる数（個）</text>';
+  const pts = d.profits.map((v, i) => X(d.xMax * i / N) + "," + Y(v));
+  s += '<polygon points="' + (L + "," + Y(0)) + " " + pts.join(" ") + " " + (X(d.xMax) + "," + Y(0)) + '" fill="#1B2E4A" opacity=".07"/>' +
+       '<polyline points="' + pts.join(" ") + '" fill="none" stroke="#1B2E4A" stroke-width="2.5"/>';
+  if (d.opt <= d.xMax){
+    s += '<line x1="' + X(d.opt) + '" y1="' + T + '" x2="' + X(d.opt) + '" y2="' + Y(d.yBot) + '" stroke="#2E7D6F" stroke-width="1.5"/>' +
+         '<circle cx="' + X(d.opt) + '" cy="' + Y(d.bestProfit) + '" r="5.5" fill="#2E7D6F"/>' +
+         '<text x="' + (X(d.opt) + 7) + '" y="' + (Y(d.bestProfit) - 9) + '" font-size="11" font-weight="700" fill="#2E7D6F">ベスト ' +
+         Math.floor(d.opt) + '個 / ' + yen(d.bestProfit) + '</text>';
+  }
+  s += '<line x1="' + X(d.purchase) + '" y1="' + T + '" x2="' + X(d.purchase) + '" y2="' + Y(d.yBot) + '" stroke="#12233D" stroke-width="1.5" stroke-dasharray="2 3"/>' +
+       '<text x="' + (X(d.purchase) + 6) + '" y="' + (T + 14) + '" font-size="10.5" fill="#12233D">いま ' + Math.floor(d.purchase) + '個</text>';
+  const hv = hover.pur;
+  if (hv !== null && hv >= 0 && hv <= N){
+    const q = d.xMax * hv / N, f = fest({purchase: q});
+    const bw = 176, bx = Math.min(Math.max(L, X(q) - bw / 2), W - R - bw), by = T + 34;
+    s += '<line x1="' + X(q) + '" y1="' + T + '" x2="' + X(q) + '" y2="' + Y(d.yBot) + '" stroke="#12233D" opacity=".25"/>' +
+         '<circle cx="' + X(q) + '" cy="' + Y(d.profits[hv]) + '" r="4.5" fill="#fff" stroke="#1B2E4A" stroke-width="2"/>' +
+         '<rect x="' + bx + '" y="' + by + '" width="' + bw + '" height="80" rx="3" fill="#fff" fill-opacity=".97" stroke="#1B2E4A"/>' +
+         '<text x="' + (bx + 9) + '" y="' + (by + 16) + '" font-size="11" font-weight="700" fill="#12233D">仕入 ' + Math.round(q) + '個</text>' +
+         '<text x="' + (bx + 9) + '" y="' + (by + 32) + '" font-size="10.5" fill="#637082">売れる数</text>' +
+         '<text x="' + (bx + bw - 9) + '" y="' + (by + 32) + '" text-anchor="end" font-size="10.5" font-family="ui-monospace,monospace">' + Math.floor(f.sold) + '個</text>' +
+         '<text x="' + (bx + 9) + '" y="' + (by + 47) + '" font-size="10.5" fill="#637082">売れ残り</text>' +
+         '<text x="' + (bx + bw - 9) + '" y="' + (by + 47) + '" text-anchor="end" font-size="10.5" font-family="ui-monospace,monospace" fill="#B4462F">' + Math.floor(f.waste) + '個</text>' +
+         '<text x="' + (bx + 9) + '" y="' + (by + 62) + '" font-size="10.5" fill="#637082">捨てる損</text>' +
+         '<text x="' + (bx + bw - 9) + '" y="' + (by + 62) + '" text-anchor="end" font-size="10.5" font-family="ui-monospace,monospace">' + yen(f.wasteLoss) + '</text>' +
+         '<text x="' + (bx + 9) + '" y="' + (by + 76) + '" font-size="11" font-weight="700" fill="#637082">儲け</text>' +
+         '<text x="' + (bx + bw - 9) + '" y="' + (by + 76) + '" text-anchor="end" font-size="11.5" font-weight="700" font-family="ui-monospace,monospace" fill="' +
+         (f.profit >= 0 ? "#2E7D6F" : "#B4462F") + '">' + yen(f.profit) + '</text>';
+  }
+  $("purChart").innerHTML = s + '</svg>';
+}
+function renderPurchase(){
+  const f = fest();
+  const xMax = Math.max(f.purchase * 1.3, f.optPurchase * 1.4, 20);
+  const N = 60, profits = [];
+  for (let i = 0; i <= N; i++) profits.push(festProfit(xMax * i / N, f.demand, f.capacity, f.o).profit);
+  const hi = Math.max.apply(null, profits.concat([0])), lo = Math.min.apply(null, profits.concat([0]));
+  const pad = (hi - lo) * 0.12 || 1;
+  animateChart("pur", {profits, xMax, yTop: hi + pad, yBot: lo - pad, purchase: f.purchase, opt: f.optPurchase, bestProfit: f.best.profit}, drawPur);
+  const el = $("purChart");
+  if (!el.dataset.hooked){
+    el.dataset.hooked = "1";
+    const toIdx = clientX => {
+      const g = geom.pur; if (!g) return null;
+      const r = el.getBoundingClientRect();
+      const x = (clientX - r.left) / r.width * g.W;
+      const i = Math.round((x - g.L) / g.iw * 60);
+      return i >= 0 && i <= 60 ? i : null;
+    };
+    el.addEventListener("pointermove", e => { const i = toIdx(e.clientX); if (i !== hover.pur){ hover.pur = i; repaint("pur"); } });
+    el.addEventListener("pointerleave", () => { if (hover.pur !== null){ hover.pur = null; repaint("pur"); } });
+    el.addEventListener("click", e => {
+      const i = toIdx(e.clientX), g = geom.pur;
+      if (i === null || !g) return;
+      $("x_purchase").value = Math.round(g.xMax * i / 60 / 10) * 10;
+      syncRanges(); render();
+    });
+  }
+  const qs = [0.6, 0.8, 0.9, 1, 1.1, 1.2, 1.4].map(r => Math.round(Math.max(1, f.purchase) * r)).concat([Math.round(f.optPurchase)]);
+  const uniq = Array.from(new Set(qs)).sort((a, b) => a - b);
+  const best = Math.max.apply(null, uniq.map(q => festProfit(q, f.demand, f.capacity, f.o).profit));
+  let t = '<thead><tr><th>仕入量</th><th>売れる数</th><th>売れ残り</th><th>売上</th><th>材料費</th><th>容器代</th><th>固定費</th><th>儲け</th></tr></thead><tbody>';
+  uniq.forEach(q => {
+    const r = festProfit(q, f.demand, f.capacity, f.o), isBase = q === Math.round(f.purchase);
+    t += '<tr data-click="purchase" data-v="' + q + '" class="' + (r.profit === best ? "best" : "") + (isBase ? " base" : "") + '"><td class="num">' +
+      q.toLocaleString("ja-JP") + '個' + (isBase ? "（いま）" : "") + '</td><td class="num">' + Math.floor(r.sold).toLocaleString("ja-JP") +
+      '</td><td class="num">' + Math.floor(r.waste).toLocaleString("ja-JP") + '</td><td class="num">' + yen0(r.revenue) +
+      '</td><td class="num">' + yen0(r.matCost) + '</td><td class="num">' + yen0(r.packCost) + '</td><td class="num">' + yen0(f.o.fixed) +
+      '</td><td class="num ' + cls(r.profit) + '">' + yen0(r.profit) + '</td></tr>';
+  });
+  $("purTable").innerHTML = t + '</tbody>';
+}
+function renderPace(){
+  const f = fest();
+  const rows = [
+    ["黒字に必要な販売数（今の仕入量）", isFinite(f.bepSold) ? Math.ceil(f.bepSold) : null, "個"],
+    ["1日に必要な販売数", isFinite(f.bepSold) ? Math.ceil(f.bepSold / f.days) : null, "個/日"],
+    ["1時間に必要な販売数", isFinite(f.bepSold) ? f.bepSold / f.hours : null, "個/時"],
+    ["必要なペース", isFinite(f.bepSold) && f.bepSold > 0 ? f.hours * 60 / f.bepSold : null, "分に1個"],
+    ["売れそうなペース", f.sold / f.hours, "個/時"],
+    ["作れる数", f.capacity / f.hours, "個/時"],
+    ["作れる数のうち使っている割合", f.capacity > 0 ? f.sold / f.capacity * 100 : null, "%"],
+    ["ほしい人全員に売るのに必要な数", f.demand / f.hours, "個/時"],
+    ["全員に売るのに必要な人数", num("x_cap") > 0 ? f.demand / f.hours / (num("x_cap") / Math.max(1, num("x_staff"))) : null, "人"],
+    ["営業時間の合計", f.hours, "時間"],
+    ["1時間あたりの固定費", f.o.fixed / f.hours, "円/時"],
+    ["黒字になるまでの営業時間", f.sold > 0 && isFinite(f.bepSold) ? f.bepSold / (f.sold / f.hours) : null, "時間"]
+  ];
+  let t = '<thead><tr><th>項目</th><th>数値</th><th>単位</th></tr></thead><tbody>';
+  rows.forEach(r => {
+    const v = r[1];
+    t += '<tr><td>' + r[0] + '</td><td class="num">' + (v === null || !isFinite(v) ? "—" : (Math.abs(v) >= 1000 ? yen0(v) : v.toFixed(1))) + '</td><td>' + r[2] + '</td></tr>';
+  });
+  $("paceTable").innerHTML = t + '</tbody>';
+}
+function renderScen(){
+  const v0 = num("x_visitors");
+  const scen = [["雨・お客さん半分（−50%）", 0.5], ["天気が悪い（−30%）", 0.7], ["ちょっと不調（−15%）", 0.85], ["想定どおり", 1], ["好調（+20%）", 1.2], ["大行列（+50%）", 1.5]];
+  let t = '<thead><tr><th>場合</th><th>1日の来場者</th><th>ほしい数</th><th>売れる数</th><th>売れ残り</th><th>売上</th><th>儲け</th><th>足かせ</th></tr></thead><tbody>';
+  scen.forEach(s => {
+    const f = fest({visitors: v0 * s[1]});
+    t += '<tr data-click="visitors" data-v="' + Math.round(v0 * s[1]) + '" class="' + (s[1] === 1 ? "base" : "") + '"><td>' + s[0] +
+      '</td><td class="num">' + yen0(v0 * s[1]) + '</td><td class="num">' + Math.floor(f.demand).toLocaleString("ja-JP") +
+      '</td><td class="num">' + Math.floor(f.sold).toLocaleString("ja-JP") + '</td><td class="num">' + Math.floor(f.waste).toLocaleString("ja-JP") +
+      '</td><td class="num">' + yen0(f.revenue) + '</td><td class="num ' + cls(f.profit) + '">' + yen0(f.profit) + '</td><td>' + f.binding + '</td></tr>';
+  });
+  $("scenTable").innerHTML = t + '</tbody>';
+}
+function renderSens(){
+  const base = model(), u = mode === "sub" ? "人" : "個";
+  const rows = [["いまの設定", {}, true],
+    ["値段 −10%", {price: base.price * 0.9}], ["値段 +10%", {price: base.price * 1.1}],
+    ["変動費 −10%", {vc: base.vc * 0.9}], ["変動費 +10%", {vc: base.vc * 1.1}],
+    ["固定費 −10%", {fixed: base.fixed * 0.9}], ["固定費 +10%", {fixed: base.fixed * 1.1}],
+    ["値段 −10% ＆ 固定費 +10%", {price: base.price * 0.9, fixed: base.fixed * 1.1}]];
+  let t = '<thead><tr><th>変えた内容</th><th>1' + u + 'で残る割合</th><th>分かれ目の' + (mode === "sub" ? "人数" : "数") +
+    '</th><th>分かれ目の売上</th><th>今の月の儲け</th><th>もととの差</th></tr></thead><tbody>';
+  rows.forEach(r => {
+    const m = model(r[1]), d = m.profit - base.profit;
+    t += '<tr class="' + (r[2] ? "base" : "") + '"><td>' + r[0] + '</td><td class="num">' + pct(m.cmr) +
+      '</td><td class="num">' + (isFinite(m.bepQty) ? Math.ceil(m.bepQty).toLocaleString("ja-JP") + u : "達成できません") +
+      '</td><td class="num">' + (isFinite(m.bepRev) ? yen0(m.bepRev) : "—") + '</td><td class="num ' + cls(m.profit) + '">' + yen0(m.profit) +
+      '</td><td class="num ' + cls(d) + '">' + (r[2] ? "—" : (d >= 0 ? "+" : "") + yen0(d)) + '</td></tr>';
+  });
+  $("sensTable").innerHTML = t + '</tbody>';
+}
+
+function renderBook(){
+  const b = book(), rows = b.monthRows;
+  const vals = rows.map(r => r.balance).concat(rows.map(r => r.in), rows.map(r => -r.out), [0, b.opening]);
+  const hi = Math.max.apply(null, vals.length ? vals : [0]), lo = Math.min.apply(null, vals.length ? vals : [0]);
+  const pad = (hi - lo) * 0.1 || 1;
+  const draw = makeBarLine("monthChart", {
+    key: "month", labels: rows.map(r => r.key.slice(2)), two: true,
+    labelFull: i => rows[i].key,
+    tip: i => [["収入", yen(rows[i].in), "pos"], ["支出", yen(rows[i].out), "neg"],
+               ["収支", yen(rows[i].net), cls(rows[i].net)], ["月末の残高", yen(rows[i].balance), cls(rows[i].balance)]]
+  });
+  animateChart("month", {pos: rows.map(r => r.in), neg: rows.map(r => r.out), line: rows.map(r => r.balance),
+                         start: b.opening, yTop: hi + pad, yBot: lo - pad}, draw);
+  hookHover("monthChart", "month", i => { if (rows[i]){ $("b_month").value = rows[i].key; render(); } });
+  $("bookHint").textContent = $("b_project").value + "／残高 " + yen(b.balance);
+
+  let t = '<thead><tr><th>月</th><th>収入</th><th>支出</th><th>収支</th><th>月末の残高</th></tr></thead><tbody>';
+  rows.forEach(r => {
+    t += '<tr data-click="month" data-v="' + r.key + '" class="' + (r.balance < 0 ? "shortfall" : "") + (r.key === b.focus ? " base" : "") + '"><td>' + esc(r.key) +
+      '</td><td class="num pos">' + yen0(r.in) + '</td><td class="num neg">' + yen0(r.out) + '</td><td class="num ' + cls(r.net) + '">' + yen0(r.net) +
+      '</td><td class="num ' + cls(r.balance) + '">' + yen0(r.balance) + '</td></tr>';
+  });
+  t += '<tr class="base"><td>合計</td><td class="num">' + yen0(b.totalIn) + '</td><td class="num">' + yen0(b.totalOut) +
+       '</td><td class="num ' + cls(b.totalIn - b.totalOut) + '">' + yen0(b.totalIn - b.totalOut) + '</td><td class="num">' + yen0(b.balance) + '</td></tr>';
+  $("monthTable").innerHTML = t + '</tbody>';
+
+  const cats = Object.keys(b.byCat).sort((x, y) => (b.byCat[x].type === b.byCat[y].type ? b.byCat[y].amount - b.byCat[x].amount : b.byCat[x].type === "in" ? -1 : 1));
+  let c = '<thead><tr><th>項目</th><th>区分</th><th>件数</th><th>金額（税込）</th><th>うち消費税</th><th>税抜</th><th class="txt">割合</th></tr></thead><tbody>';
+  cats.forEach(k => {
+    const v = b.byCat[k], denom = v.type === "in" ? (b.totalIn || 1) : (b.totalOut || 1), w = Math.max(1, v.amount / denom * 100);
+    c += '<tr><td>' + esc(k) + '</td><td>' + (v.type === "in" ? "収入" : "支出") + '</td><td class="num">' + v.count +
+      '</td><td class="num ' + (v.type === "in" ? "pos" : "neg") + '">' + yen0(v.amount) + '</td><td class="num">' + yen0(v.tax) +
+      '</td><td class="num">' + yen0(v.amount - v.tax) + '</td><td class="txt"><span style="display:inline-block;height:8px;border-radius:4px;width:' +
+      w.toFixed(1) + '%;background:' + (v.type === "in" ? "#2E7D6F" : "#B4462F") + ';opacity:.75;transition:width .4s var(--ease)"></span> ' +
+      '<span class="num" style="font-size:11px;color:var(--gray)">' + pct(v.amount / denom) + '</span></td></tr>';
+  });
+  if (!cats.length) c += '<tr><td colspan="7" class="txt">まだ記録がありません</td></tr>';
+  $("catTable").innerHTML = c + '</tbody>';
+
+  $("splitHint").textContent = b.split === "equal"
+    ? "割り勘：1人あたり " + yen(b.share) + "（" + b.names.length + "人）" : "立替は全額プロジェクトのお金から返します";
+  let m = '<thead><tr><th>名前</th><th>立て替えた額</th><th>預かった額（受け取った収入）</th><th>差引の立替</th>' +
+          (b.split === "equal" ? '<th>負担する額</th>' : '') + '<th>精算後：もらう(+)／払う(−)</th></tr></thead><tbody>';
+  b.positions.forEach(p => {
+    m += '<tr><td>' + esc(p.name) + '</td><td class="num">' + yen0(p.advance) + '</td><td class="num">' + yen0(p.held) +
+      '</td><td class="num">' + yen0(p.net) + '</td>' + (b.split === "equal" ? '<td class="num">' + yen0(p.share) + '</td>' : '') +
+      '<td class="num ' + cls(p.balance) + '">' + (p.balance >= 0 ? "+" : "") + yen0(p.balance) + '</td></tr>';
+  });
+  if (!b.positions.length) m += '<tr><td colspan="6" class="txt">メンバーを追加してください</td></tr>';
+  $("memberTable").innerHTML = m + '</tbody>';
+  $("settleList").innerHTML = b.transfers.length
+    ? '<div class="note"><strong style="color:var(--ink)">精算の送金リスト</strong><ul>' +
+      b.transfers.map(x => '<li>' + esc(x.from) + ' → ' + esc(x.to) + '：<strong>' + yen(x.v) + '</strong></li>').join("") + '</ul></div><div style="height:12px"></div>'
+    : '<p class="note">精算が必要な立替はありません。</p><div style="height:12px"></div>';
+
+  $("ledgerCount").textContent = entries.length + "件／未精算の立替 " + yen(b.totalAdvance);
+  let l = '<thead><tr><th>日付</th><th class="txt">科目</th><th class="txt">内容</th><th>区分</th><th>金額</th><th>税</th><th class="txt">払った人</th><th class="txt">払い方</th><th>精算</th><th></th></tr></thead><tbody>';
+  b.sorted.slice().reverse().forEach(e => {
+    l += '<tr class="' + (e.settled ? "settled" : "") + '"><td class="num">' + esc(e.date) + '</td><td class="txt">' + esc(e.cat) +
+      '</td><td class="txt">' + esc(e.memo) + '</td><td>' + (e.type === "in" ? "収入" : "支出") +
+      '</td><td class="num ' + (e.type === "in" ? "pos" : "neg") + '">' + (e.type === "in" ? "+" : "−") + yen0(e.amount) +
+      '</td><td class="num">' + (e.tax ? e.tax + "%" : "—") + '</td><td class="txt">' + esc(e.payer) + '</td><td class="txt">' + esc(METHODS[e.method] || e.method) +
+      '</td><td>' + (e.method === "advance" ? '<button class="rowbtn" data-act="settle" data-id="' + e.id + '">' + (e.settled ? "済" : "未") + '</button>' : "—") +
+      '</td><td><button class="rowbtn" data-act="edit" data-id="' + e.id + '">編集</button> <button class="rowbtn del" data-act="del" data-id="' + e.id + '">削除</button></td></tr>';
+  });
+  if (!entries.length) l += '<tr><td colspan="10" class="txt">まだ記録がありません。上のフォームから入力してください。</td></tr>';
+  $("ledgerTable").innerHTML = l + '</tbody>';
+}
+
+document.addEventListener("click", e => {
+  const tr = e.target.closest("tr[data-click]");
+  if (!tr || e.target.closest("button")) return;
+  const k = tr.dataset.click, v = tr.dataset.v;
+  if (k === "purchase"){ $("x_purchase").value = v; syncRanges(); render(); }
+  else if (k === "visitors"){ $("x_visitors").value = v; syncRanges(); render(); }
+  else if (k === "month"){ $("b_month").value = v; render(); }
+});
+
+function renderFormulas(){
+  let h = '<ul>';
+  if (isBook()){
+    h += '<li>残高 ＝ はじめのお金 ＋ 収入の合計 − 支出の合計</li>';
+    h += '<li>消費税ぶん ＝ 税込金額 − 税込金額 ÷(1 ＋ 税率)</li>';
+    h += '<li>差引の立替 ＝ 立替で払ったお金 − その人が受け取ったお金（手元に残っている現金）</li>';
+    h += '<li>割り勘：1人あたりの負担 ＝(支出合計 − 収入合計)÷ メンバー数。精算後 ＝ 差引の立替 − 負担額（＋ならもらう、−なら払う）</li>';
+    h += '<li>送金リストは、もらう額の大きい人から順に割り当てて、送金の回数を少なくしています。</li>';
+    h += '</ul><ul style="margin-top:8px">';
+    h += '<li>かんたんな現金出納帳の方式です。むずかしい仕訳や貸借対照表は作りません。</li>';
+    h += '<li>「済」にした立替は、これからの精算計算から外れます。</li>';
+    h += '<li>データはURLに保存されます。長く残したいときはJSONコピーか印刷で。</li>';
+  } else if (isFest()){
+    const f = fest();
+    h += '<li>ほしい人の数 ＝ 来場者 × 日数 × 購入率 × 1人あたりの個数 ＝ <strong>' + Math.floor(f.demand) + '個</strong></li>';
+    h += '<li>作れる数 ＝ 1時間に作れる数 × 営業時間 ＝ <strong>' + Math.floor(f.capacity) + '個</strong></li>';
+    h += '<li>売れる数 ＝「ほしい数・仕入量・作れる数」のいちばん小さいもの ＝ <strong>' + Math.floor(f.sold) + '個</strong>（足かせ: ' + f.binding + '）</li>';
+    h += '<li>儲け ＝ 売上 −(固定費 ＋ 材料費×<em>仕入量</em> ＋ 容器代×売れた数) ＝ <strong>' + yen(f.profit) + '</strong></li>';
+    h += '<li>赤字にならない数 ＝(固定費 ＋ 材料費×仕入量)÷(値段 − 容器代) ＝ <strong>' + (isFinite(f.bepSold) ? Math.ceil(f.bepSold) + "個" : "—") + '</strong></li>';
+    h += '<li>いちばん儲かる仕入量 ＝「ほしい数」と「作れる数」の小さい方。それ以上仕入れると、材料費がそのまま損になります。</li>';
+    h += '</ul><ul style="margin-top:8px">';
+    h += '<li>材料は先にまとめて買います（売れ残りは捨てます）。時間帯の混雑の波は考えていません。ピークは需要の1.5〜2倍で見て人を配置してください。</li>';
+    h += '<li>模擬店の売上は税計算していません。保健所の許可・火気の扱い・値段の上限は、学校のルールを確認してください。</li>';
+  } else {
+    const m = model(), u = mode === "sub" ? "人" : "個";
+    h += '<li>1' + u + '売ると残るお金 ＝ 値段 − 変動費 ＝ ' + yen(m.price) + ' − ' + yen(m.vc) + ' ＝ <strong>' + yen(m.cm) + '/' + u + '</strong></li>';
+    h += '<li>赤字にならない数 ＝ 固定費 ÷ 1' + u + 'あたりの残り ＝ <strong>' + (isFinite(m.bepQty) ? m.bepQty.toFixed(1) + u : "—") + '</strong></li>';
+    h += '<li>赤字にならない売上 ＝ 固定費 ÷ 残る割合 ＝ <strong>' + (isFinite(m.bepRev) ? yen(m.bepRev) : "—") + '</strong></li>';
+    h += '<li>安全余裕率 ＝(売上 − 分かれ目の売上)÷ 売上</li>';
+    if (mode === "sub") h += '<li>LTV ＝ 1か月の残り ÷ 解約率、CAC ＝ 広告費 ÷ 新規会員数、会員の上限 ＝ 新規会員数 ÷ 解約率</li>';
+    else h += '<li>販売数の推移：翌月 ＝ 今月 ×(1 ＋ 伸び率)</li>';
+    h += '<li>手元のお金 ＝ 前月の残高 ＋ 税引後の儲け − 返済額</li>';
+    h += '</ul><ul style="margin-top:8px">';
+    h += '<li>消費税は税抜で計算。減価償却・在庫・入金の遅れ・利息は含みません。</li>';
+    h += '<li>税金は儲けが出た月だけかかり、赤字はあとから差し引けます。税率は目安です。</li>';
+  }
+  $("formulas").innerHTML = h + '</ul>';
+}
+
+function buildRanges(){
+  document.querySelectorAll("input[data-range]").forEach(inp => {
+    const p = inp.dataset.range.split(",");
+    const wrap = document.createElement("div");
+    wrap.className = "rangewrap";
+    const r = document.createElement("input");
+    r.type = "range"; r.min = p[0]; r.max = p[1]; r.step = p[2]; r.value = inp.value;
+    r.setAttribute("aria-label", (document.querySelector('label[for="' + inp.id + '"]') || {textContent: inp.id}).textContent + " スライダー");
+    r.addEventListener("input", () => { inp.value = r.value; render(); });
+    inp.dataset.slider = "1";
+    wrap.appendChild(r);
+    inp.closest(".f").appendChild(wrap);
+    inp._range = r;
+  });
+}
+function syncRanges(){
+  document.querySelectorAll("input[data-range]").forEach(inp => { if (inp._range && inp._range.value !== inp.value) inp._range.value = inp.value; });
+}
+
+function render(resetMarker){
+  if (resetMarker !== false) markerX = null;
+  syncRanges();
+  $("fixedTotal").textContent = yen(num("f_rent") + num("f_labor") + num("f_ad") + num("f_sys") + num("f_other"));
+  $("festFixedTotal").textContent = yen(num("z_stall") + num("z_rent") + num("z_promo") + num("z_supply") + num("z_other"));
+  renderKPIs();
+  if (isBook()) renderBook();
+  else {
+    animateChart("bep", bepTarget(), drawBEP);
+    hookBep();
+    if (isFest()){ renderPurchase(); renderPace(); renderScen(); }
+    else { renderCF(); renderSens(); }
+  }
+  renderFormulas();
+  saveHash();
+}
+function hookBep(){
+  const el = $("bepChart");
+  if (el.dataset.hooked) return;
+  el.dataset.hooked = "1";
+  const toQty = clientX => {
+    const g = geom.bep; if (!g) return 0;
+    const r = el.getBoundingClientRect();
+    return Math.max(0, Math.min(g.xMax, ((clientX - r.left) / r.width * g.W - g.L) / g.iw * g.xMax));
+  };
+  const move = e => { markerX = toQty(e.clientX); repaint("bep"); };
+  el.addEventListener("pointerdown", e => {
+    e.preventDefault(); markerX = toQty(e.clientX); repaint("bep");
+    const up = () => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", up); };
+    window.addEventListener("pointermove", move); window.addEventListener("pointerup", up);
+  });
+  el.addEventListener("keydown", e => {
+    const g = geom.bep; if (!g) return;
+    const cur = markerX === null ? (charts.bep ? charts.bep.target.qty : 0) : markerX, step = g.xMax / 50;
+    if (e.key === "ArrowRight"){ markerX = Math.min(g.xMax, cur + step); repaint("bep"); e.preventDefault(); }
+    if (e.key === "ArrowLeft"){ markerX = Math.max(0, cur - step); repaint("bep"); e.preventDefault(); }
+  });
+}
+
+function fillSelects(){
+  const type = $("e_type").value, cur = $("e_cat").value;
+  $("e_cat").innerHTML = CATS[type].map(c => '<option value="' + esc(c) + '"' + (c === cur ? " selected" : "") + '>' + esc(c) + '</option>').join("");
+  const payer = $("e_payer").value;
+  $("e_payer").innerHTML = members.map(m => '<option value="' + esc(m) + '"' + (m === payer ? " selected" : "") + '>' + esc(m) + '</option>').join("")
+    + '<option value="プロジェクト">プロジェクト（みんなのお金）</option>';
+}
+function renderMembers(){
+  $("memberChips").innerHTML = members.map((m, i) =>
+    '<span class="chip">' + esc(m) + (members.length > 1 ? ' <button type="button" data-mi="' + i + '" aria-label="削除">×</button>' : '') + '</span>').join("");
+  fillSelects();
+}
+$("memberChips").addEventListener("click", e => {
+  const b = e.target.closest("button[data-mi]"); if (!b) return;
+  members.splice(+b.dataset.mi, 1);
+  if (!members.length) members = ["自分"];
+  renderMembers(); render();
+});
+$("memberAdd").addEventListener("click", () => {
+  const v = $("memberInput").value.trim();
+  if (!v || members.indexOf(v) >= 0) return;
+  members.push(v); $("memberInput").value = "";
+  renderMembers(); render();
+});
+$("memberInput").addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); $("memberAdd").click(); } });
+$("e_type").addEventListener("change", fillSelects);
+function resetForm(){
+  editId = null;
+  $("e_memo").value = ""; $("e_amount").value = "";
+  $("e_add").textContent = "記録する"; $("e_cancel").hidden = true; $("editHint").textContent = "";
+}
+$("e_add").addEventListener("click", () => {
+  const amount = evalExpr($("e_amount").value);
+  if (amount === null || amount <= 0){ $("editHint").textContent = "金額を数字か式で入力してください"; $("e_amount").focus(); return; }
+  const rec = {id: editId !== null ? editId : seq++, date: $("e_date").value || new Date().toISOString().slice(0, 10),
+    type: $("e_type").value, cat: $("e_cat").value, memo: $("e_memo").value.trim(),
+    amount: Math.round(amount * 100) / 100, tax: +$("e_tax").value, payer: $("e_payer").value, method: $("e_method").value, settled: false};
+  if (editId !== null){ const i = entries.findIndex(x => x.id === editId); rec.settled = entries[i].settled; entries[i] = rec; }
+  else entries.push(rec);
+  resetForm(); render();
+});
+$("e_cancel").addEventListener("click", () => { resetForm(); render(); });
+$("e_amount").addEventListener("keydown", e => { if (e.key === "Enter"){ e.preventDefault(); $("e_add").click(); } });
+$("ledgerTable").addEventListener("click", e => {
+  const b = e.target.closest("button[data-act]"); if (!b) return;
+  const id = +b.dataset.id, i = entries.findIndex(x => x.id === id);
+  if (i < 0) return;
+  if (b.dataset.act === "del"){ entries.splice(i, 1); if (editId === id) resetForm(); }
+  else if (b.dataset.act === "settle") entries[i].settled = !entries[i].settled;
+  else if (b.dataset.act === "edit"){
+    const e2 = entries[i];
+    editId = id;
+    $("e_date").value = e2.date; $("e_type").value = e2.type; fillSelects();
+    $("e_cat").value = e2.cat; $("e_memo").value = e2.memo; $("e_amount").value = e2.amount;
+    $("e_tax").value = String(e2.tax); $("e_payer").value = e2.payer; $("e_method").value = e2.method;
+    $("e_add").textContent = "この内容で更新"; $("e_cancel").hidden = false;
+    $("editHint").textContent = "編集中：" + (e2.memo || e2.cat);
+    $("e_memo").focus();
+  }
+  render();
+});
+
+function dump(){
+  const o = {v: 4, mode, months, members, entries, seq, inputs: {}};
+  IDS.forEach(id => o.inputs[id] = $(id).value);
+  return o;
+}
+function load(o){
+  if (!o) return;
+  if (o.inputs) IDS.forEach(id => { if (o.inputs[id] !== undefined) $(id).value = o.inputs[id]; });
+  else IDS.forEach(id => { if (o[id] !== undefined) $(id).value = o[id]; });
+  if (o.mode) mode = o.mode;
+  if (o.months) months = +o.months;
+  if (Array.isArray(o.members) && o.members.length) members = o.members;
+  if (Array.isArray(o.entries)) entries = o.entries;
+  seq = Math.max(1, o.seq || (entries.reduce((m, e) => Math.max(m, e.id), 0) + 1));
+}
+let hashTimer = null;
+function saveHash(){
+  clearTimeout(hashTimer);
+  hashTimer = setTimeout(() => { try { history.replaceState(null, "", "#" + encodeURIComponent(JSON.stringify(dump()))); } catch(e){} }, 400);
+}
+$("btnJson").addEventListener("click", async e => {
+  try { await navigator.clipboard.writeText(JSON.stringify(dump())); e.target.textContent = "コピーしました"; }
+  catch(err){ e.target.textContent = "コピー不可"; }
+  setTimeout(() => e.target.textContent = "JSONでコピー", 1600);
+});
+$("btnImport").addEventListener("click", () => {
+  const s = prompt("JSONを貼り付けてください");
+  if (!s) return;
+  try { load(JSON.parse(s)); renderMembers(); syncToggles(); render(); }
+  catch(err){ alert("読み込めませんでした。"); }
+});
+$("btnClear").addEventListener("click", () => { if (confirm("記録をすべて消します。よろしいですか？")){ entries = []; resetForm(); render(); } });
+$("btnSample").addEventListener("click", () => {
+  const y = new Date(), ym = d => new Date(y.getFullYear(), y.getMonth() - d, 5).toISOString().slice(0, 10);
+  members = Array.from(new Set(members.concat(["自分", "田中", "佐藤"])));
+  entries = entries.concat([
+    {id: seq++, date: ym(2), type: "in", cat: "部費・会費", memo: "メンバー会費", amount: 24000, tax: 0, payer: "プロジェクト", method: "bank", settled: false},
+    {id: seq++, date: ym(2), type: "out", cat: "印刷・広報費", memo: "チラシ印刷", amount: 8800, tax: 10, payer: "田中", method: "advance", settled: false},
+    {id: seq++, date: ym(1), type: "out", cat: "機材レンタル", memo: "鉄板・ガスコンロ", amount: 13200, tax: 10, payer: "自分", method: "advance", settled: false},
+    {id: seq++, date: ym(1), type: "out", cat: "材料費", memo: "小麦粉・キャベツ", amount: 21600, tax: 8, payer: "佐藤", method: "advance", settled: false},
+    {id: seq++, date: ym(0), type: "out", cat: "会場・出店料", memo: "出店料", amount: 5000, tax: 0, payer: "プロジェクト", method: "bank", settled: false},
+    {id: seq++, date: ym(0), type: "in", cat: "売上", memo: "1日目売上", amount: 78400, tax: 8, payer: "自分", method: "advance", settled: false},
+    {id: seq++, date: ym(0), type: "in", cat: "協賛金", memo: "地元商店協賛", amount: 20000, tax: 0, payer: "プロジェクト", method: "bank", settled: false}
+  ]);
+  renderMembers(); render();
+});
+$("btnTsvBook").addEventListener("click", async e => {
+  const b = book();
+  const head = ["日付", "区分", "科目", "内容", "金額(税込)", "税率", "消費税ぶん", "税抜", "払った人", "払い方", "精算"];
+  const tsv = [head.join("\t")].concat(b.sorted.map(x => {
+    const t = x.tax > 0 ? x.amount - x.amount / (1 + x.tax / 100) : 0;
+    return [x.date, x.type === "in" ? "収入" : "支出", x.cat, x.memo, Math.round(x.amount), x.tax + "%",
+            Math.round(t), Math.round(x.amount - t), x.payer, METHODS[x.method] || x.method, x.settled ? "済" : ""].join("\t");
+  })).join("\n");
+  try { await navigator.clipboard.writeText(tsv); e.target.textContent = "コピーしました（Excel貼付可）"; }
+  catch(err){ e.target.textContent = "コピー不可"; }
+  setTimeout(() => e.target.textContent = "Excel用にコピー（TSV）", 1800);
+});
+$("btnPrint2").addEventListener("click", () => window.print());
+$("btnPrint").addEventListener("click", () => window.print());
+$("btnReset").addEventListener("click", () => { IDS.forEach(id => $(id).value = DEFAULTS[id]); months = 12; syncToggles(); render(); });
+$("btnLink").addEventListener("click", async e => {
+  try { await navigator.clipboard.writeText(location.href); e.target.textContent = "コピーしました"; }
+  catch(err){ e.target.textContent = "コピー不可"; }
+  setTimeout(() => e.target.textContent = "この条件のURLをコピー", 1800);
+});
+$("btnCopy").addEventListener("click", async e => {
+  if (isBook()){ $("btnTsvBook").click(); return; }
+  let tsv;
+  if (isFest()){
+    const f = fest();
+    const head = ["仕入量", "売れる数", "売れ残り", "売上", "材料費", "容器代", "固定費", "儲け"];
+    const qs = [0.6, 0.8, 0.9, 1, 1.1, 1.2, 1.4].map(r => Math.round(Math.max(1, f.purchase) * r)).concat([Math.round(f.optPurchase)]);
+    tsv = [head.join("\t")].concat(Array.from(new Set(qs)).sort((a, b) => a - b).map(q => {
+      const r = festProfit(q, f.demand, f.capacity, f.o);
+      return [q, Math.floor(r.sold), Math.floor(r.waste), Math.round(r.revenue), Math.round(r.matCost),
+              Math.round(r.packCost), Math.round(f.o.fixed), Math.round(r.profit)].join("\t");
+    })).join("\n");
+  } else {
+    const p = project(months);
+    const head = ["月", mode === "sub" ? "会員数" : "販売数", "売上", "変動費", "固定費", "税引前の儲け", "税金", "税引後の儲け", "儲けの合計", "手元のお金"];
+    tsv = [head.join("\t")].concat(p.rows.map(r =>
+      [r.i, Math.round(r.vol), Math.round(r.revenue), Math.round(r.variable), Math.round(r.fixed),
+       Math.round(r.pbt), Math.round(r.tax), Math.round(r.net), Math.round(r.cumProfit), Math.round(r.cash)].join("\t"))).join("\n");
+  }
+  try { await navigator.clipboard.writeText(tsv); e.target.textContent = "コピーしました（Excelに貼付可）"; }
+  catch(err){ e.target.textContent = "コピー不可"; }
+  setTimeout(() => e.target.textContent = "数字をコピー（TSV）", 1800);
+});
+
+/* ===== モバイルUI（ドロワー／タブバー） ===== */
+function openDrawer(){ document.body.classList.add("drawer-open"); }
+function closeDrawer(){ document.body.classList.remove("drawer-open"); }
+$("settingsFab").addEventListener("click", openDrawer);
+$("backdrop").addEventListener("click", closeDrawer);
+$("drawerClose").addEventListener("click", closeDrawer);
+
+function syncToggles(){
+  document.querySelectorAll("#modes button, #tabbar button").forEach(b => b.setAttribute("aria-pressed", b.dataset.mode === mode));
+  document.querySelectorAll("#months button").forEach(b => b.setAttribute("aria-pressed", +b.dataset.m === months));
+  document.querySelectorAll("[data-for]").forEach(el => {
+    const show = el.dataset.for.split(" ").indexOf(mode) >= 0;
+    if (show && el.hidden && el.classList.contains("panel")){
+      el.classList.remove("enter"); void el.offsetWidth; el.classList.add("enter");
+    }
+    el.hidden = !show;
+  });
+  Object.keys(hover).forEach(k => hover[k] = null);
+}
+IDS.forEach(id => $(id).addEventListener("input", () => render()));
+$("b_split").addEventListener("change", () => render());
+document.querySelectorAll("#modes button, #tabbar button").forEach(b => b.addEventListener("click", () => {
+  mode = b.dataset.mode;
+  ["bep", "cf", "pur", "month"].forEach(k => { if (charts[k]) charts[k].cur = null; });
+  syncToggles(); render(); closeDrawer();
+}));
+document.querySelectorAll("#months button").forEach(b => b.addEventListener("click", () => { months = +b.dataset.m; syncToggles(); render(); }));
+
+(function init(){
+  const today = new Date().toISOString().slice(0, 10);
+  $("e_date").value = today;
+  if (!$("b_month").value) $("b_month").value = today.slice(0, 7);
+  if (location.hash && location.hash.length > 2){
+    try { load(JSON.parse(decodeURIComponent(location.hash.slice(1)))); } catch(e){}
+  }
+  buildRanges();
+  renderMembers();
+  syncToggles();
+  render();
+  if ("serviceWorker" in navigator && location.protocol.startsWith("http")){
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
+})();
+</script>
+</body>
+</html>
